@@ -11,6 +11,7 @@ import Applications from "./pages/Applications";
 import RiskEngine from "./pages/RiskEngine";
 import CamGenerator from "./pages/CamGenerator";
 import Tracking from "./pages/Tracking";
+import AdminSettings from "./pages/AdminSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,8 +33,8 @@ const App = () => (
             <Route path="/tracking" element={<Tracking />} />
             <Route path="/research" element={<Dashboard />} />
             <Route path="/search" element={<Dashboard />} />
-            <Route path="/admin/users" element={<Dashboard />} />
-            <Route path="/admin/settings" element={<Dashboard />} />
+            <Route path="/admin/users" element={<AdminSettings />} />
+            <Route path="/admin/settings" element={<AdminSettings />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
