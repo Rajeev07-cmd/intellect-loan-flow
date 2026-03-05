@@ -8,6 +8,7 @@ import {
   Settings,
   Search,
   Brain,
+  Gavel,
   Users,
   LogOut,
   ChevronLeft,
@@ -37,6 +38,7 @@ const mainItems = [
   { title: "Risk Engine", url: "/risk-engine", icon: Shield },
   { title: "CAM Generator", url: "/cam-generator", icon: BookOpen },
   { title: "Tracking", url: "/tracking", icon: GitBranch },
+  { title: "Decision Center", url: "/decision-center", icon: Gavel },
 ];
 
 const toolItems = [

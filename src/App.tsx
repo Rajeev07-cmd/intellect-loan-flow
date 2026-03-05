@@ -13,6 +13,7 @@ import CamGenerator from "./pages/CamGenerator";
 import Tracking from "./pages/Tracking";
 import DocumentVerification from "./pages/DocumentVerification";
 import AdminSettings from "./pages/AdminSettings";
+import DecisionCenter from "./pages/DecisionCenter";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +34,7 @@ const App = () => (
             <Route path="/cam-generator" element={<CamGenerator />} />
             <Route path="/document-verification" element={<DocumentVerification />} />
             <Route path="/tracking" element={<Tracking />} />
+            <Route path="/decision-center" element={<DecisionCenter />} />
             <Route path="/research" element={<Dashboard />} />
             <Route path="/search" element={<Dashboard />} />
             <Route path="/admin/users" element={<AdminSettings />} />
