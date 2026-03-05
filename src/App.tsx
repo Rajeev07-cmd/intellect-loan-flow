@@ -11,6 +11,7 @@ import Applications from "./pages/Applications";
 import RiskEngine from "./pages/RiskEngine";
 import CamGenerator from "./pages/CamGenerator";
 import Tracking from "./pages/Tracking";
+import DocumentVerification from "./pages/DocumentVerification";
 import AdminSettings from "./pages/AdminSettings";
 import NotFound from "./pages/NotFound";
 
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/applications" element={<Applications />} />
             <Route path="/risk-engine" element={<RiskEngine />} />
             <Route path="/cam-generator" element={<CamGenerator />} />
+            <Route path="/document-verification" element={<DocumentVerification />} />
             <Route path="/tracking" element={<Tracking />} />
             <Route path="/research" element={<Dashboard />} />
             <Route path="/search" element={<Dashboard />} />

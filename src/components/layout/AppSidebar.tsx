@@ -1,6 +1,7 @@
 import {
   LayoutDashboard,
   FileText,
+  FileCheck,
   Shield,
   BookOpen,
   GitBranch,
@@ -32,6 +33,7 @@ import {
 const mainItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Applications", url: "/applications", icon: FileText },
+  { title: "Doc Verification", url: "/document-verification", icon: FileCheck },
   { title: "Risk Engine", url: "/risk-engine", icon: Shield },
   { title: "CAM Generator", url: "/cam-generator", icon: BookOpen },
   { title: "Tracking", url: "/tracking", icon: GitBranch },
