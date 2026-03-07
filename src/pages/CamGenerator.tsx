@@ -1,12 +1,30 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { FileDown, Share2, FileText, CheckCircle, XCircle, AlertTriangle, Download } from "lucide-react";
+import { FileDown, Share2, FileText, CheckCircle, XCircle, AlertTriangle, Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { fiveCsScores, extractedData } from "@/lib/mock-data";
+import { useToast } from "@/hooks/use-toast";
 
 const overallScore = fiveCsScores.reduce((sum, c) => sum + c.contribution, 0);
 
 export default function CamGenerator() {
+  const { toast } = useToast();
+  const [exporting, setExporting] = useState<string | null>(null);
+
+  const handleExport = (format: string) => {
+    setExporting(format);
+    toast({ title: `Generating ${format}...`, description: "Please wait while the document is being prepared." });
+    setTimeout(() => {
+      setExporting(null);
+      toast({ title: `${format} Ready`, description: `Credit Appraisal Memo has been exported as ${format}. Download started.` });
+    }, 2000);
+  };
+
+  const handleShare = () => {
+    toast({ title: "Shared with Committee", description: "CAM report has been shared with the Credit Committee for review." });
+  };
+
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <div className="flex items-center justify-between">
@@ -15,13 +33,25 @@ export default function CamGenerator() {
           <p className="text-sm text-muted-foreground mt-1">Generated on March 3, 2026 • Draft v2.1</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-2 border-border/50 text-muted-foreground hover:text-foreground">
-            <FileDown className="h-4 w-4" /> Export PDF
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 border-border/50 text-muted-foreground hover:text-foreground"
+            disabled={exporting === "PDF"}
+            onClick={() => handleExport("PDF")}
+          >
+            {exporting === "PDF" ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />} Export PDF
           </Button>
-          <Button variant="outline" size="sm" className="gap-2 border-border/50 text-muted-foreground hover:text-foreground">
-            <Download className="h-4 w-4" /> Word
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 border-border/50 text-muted-foreground hover:text-foreground"
+            disabled={exporting === "Word"}
+            onClick={() => handleExport("Word")}
+          >
+            {exporting === "Word" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} Word
           </Button>
-          <Button size="sm" className="gap-2 bg-primary text-primary-foreground">
+          <Button size="sm" className="gap-2 bg-primary text-primary-foreground" onClick={handleShare}>
             <Share2 className="h-4 w-4" /> Share with Committee
           </Button>
         </div>

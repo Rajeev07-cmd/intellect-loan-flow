@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Building2, IndianRupee, Factory, Shield, Brain, ChevronDown, ChevronRight,
-  CheckCircle2, Clock, AlertTriangle, XCircle, Send, AtSign, Paperclip,
-  ThumbsUp, ThumbsDown, RotateCcw, FileCheck, User, MessageSquare,
+  Building2, IndianRupee, Factory, Shield, Brain, ChevronRight,
+  CheckCircle2, Clock, AlertTriangle, XCircle, Send, Paperclip,
+  ThumbsUp, ThumbsDown, RotateCcw, FileCheck, User, MessageSquare, Loader2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,11 +11,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/use-toast";
 
 // Mock data
 const applicationData = {
@@ -58,7 +58,7 @@ const camSummary = {
   aiExplanation: "The AI model flagged this application for conditional approval due to: (1) DSCR of 1.35x is marginally below threshold, (2) client concentration risk, and (3) pending litigation. However, strong promoter track record, improving margins, and adequate collateral coverage (1.4x) provide mitigating factors.",
 };
 
-const approvalStages = [
+const initialApprovalStages = [
   { role: "Credit Analyst", user: "Priya Sharma", status: "completed", timestamp: "Mar 4, 2026 — 12:10 PM", decision: "Recommended for Review" },
   { role: "Senior Credit Officer", user: "Amit Desai", status: "completed", timestamp: "Mar 4, 2026 — 2:05 PM", decision: "Approved with conditions" },
   { role: "Risk Committee", user: "Dr. Meera Iyer", status: "in_progress", timestamp: "Mar 5, 2026 — 10:30 AM", decision: "Under Review" },
@@ -75,7 +75,7 @@ const auditTrail = [
   { time: "10:30 AM", event: "Risk Committee review initiated", user: "Dr. Meera Iyer" },
 ];
 
-const existingComments = [
+const initialComments = [
   { user: "Priya Sharma", role: "Credit Analyst", time: "12:15 PM", text: "Application looks strong overall. DSCR is slightly below threshold but improving trend noted. Recommending for senior review." },
   { user: "Amit Desai", role: "Sr. Credit Officer", time: "2:00 PM", text: "@RiskHead please review the litigation case details before committee. The ₹8.5 Cr exposure needs assessment against collateral." },
   { user: "Dr. Meera Iyer", role: "Risk Head", time: "10:35 AM", text: "Reviewing litigation exposure now. The NCLT case appears procedural — will confirm with legal team." },
@@ -107,7 +107,13 @@ export default function DecisionCenter() {
   const [riskAdjustment, setRiskAdjustment] = useState([0]);
   const [approvedAmount, setApprovedAmount] = useState("22");
   const [interestRate, setInterestRate] = useState("11.5");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [comments, setComments] = useState(initialComments);
+  const [approvalStages, setApprovalStages] = useState(initialApprovalStages);
+  const [trailEntries, setTrailEntries] = useState(auditTrail);
   const adjustedScore = Math.max(0, Math.min(100, applicationData.aiRiskScore + riskAdjustment[0]));
+  const { toast } = useToast();
 
   const toggleReason = (reason: string) => {
     setSelectedReasons((prev) =>
@@ -118,9 +124,6 @@ export default function DecisionCenter() {
   const getRiskColor = (score: number) =>
     score <= 40 ? "text-risk-low" : score <= 65 ? "text-risk-medium" : "text-risk-high";
 
-  const getRiskBg = (score: number) =>
-    score <= 40 ? "bg-risk-low" : score <= 65 ? "bg-risk-medium" : "bg-risk-high";
-
   const getRiskLabel = (score: number) =>
     score <= 40 ? "Low Risk" : score <= 65 ? "Medium Risk" : "High Risk";
 
@@ -128,6 +131,62 @@ export default function DecisionCenter() {
     if (status === "completed") return <CheckCircle2 className="h-5 w-5 text-risk-low" />;
     if (status === "in_progress") return <Clock className="h-5 w-5 text-risk-medium animate-pulse" />;
     return <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/30" />;
+  };
+
+  const handleSubmitDecision = () => {
+    if (!decision) {
+      toast({ title: "Select a Decision", description: "Please choose Approve, Conditional, Reject, or Re-Review.", variant: "destructive" });
+      return;
+    }
+    if (selectedReasons.length === 0) {
+      toast({ title: "Reasons Required", description: "Please select at least one decision reason.", variant: "destructive" });
+      return;
+    }
+    setSubmitting(true);
+    toast({ title: "Submitting Decision...", description: "Processing your decision." });
+    setTimeout(() => {
+      setSubmitting(false);
+      setSubmitted(true);
+      
+      // Update approval stages
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+      setApprovalStages(prev => prev.map(s => 
+        s.status === "in_progress" ? { ...s, status: "completed", timestamp: `Mar ${now.getDate()}, 2026 — ${timeStr}`, decision: decision === "approve" ? "Approved" : decision === "conditional" ? "Conditional Approval" : decision === "reject" ? "Rejected" : "Sent for Re-Review" } :
+        s.status === "pending" ? { ...s, status: decision === "re-review" ? "pending" : "completed", timestamp: decision === "re-review" ? "—" : `Mar ${now.getDate()}, 2026 — ${timeStr}`, decision: decision === "re-review" ? "Pending" : "Final Decision Recorded" } : s
+      ));
+      
+      // Add to audit trail
+      setTrailEntries(prev => [
+        { time: timeStr, event: `Committee decision submitted: ${decision.toUpperCase()} — ₹${approvedAmount} Cr at ${interestRate}%`, user: "Rajesh Kumar" },
+        ...prev,
+      ]);
+
+      const decisionLabels: Record<string, string> = {
+        approve: "APPROVED", conditional: "CONDITIONAL APPROVAL", reject: "REJECTED", "re-review": "SENT FOR RE-REVIEW"
+      };
+      toast({ title: "Decision Submitted", description: `Final decision: ${decisionLabels[decision]}. Loan amount: ₹${approvedAmount} Cr.` });
+    }, 2000);
+  };
+
+  const handleSendComment = () => {
+    if (!newComment.trim()) {
+      toast({ title: "Error", description: "Please enter a comment.", variant: "destructive" });
+      return;
+    }
+    const newEntry = {
+      user: "Rajesh Kumar",
+      role: "Credit Manager",
+      time: new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
+      text: newComment,
+    };
+    setComments(prev => [...prev, newEntry]);
+    setNewComment("");
+    toast({ title: "Comment Posted", description: "Your comment has been added to the discussion." });
+  };
+
+  const handleAttach = () => {
+    toast({ title: "Attach File", description: "File attachment feature — select a document to attach to this discussion." });
   };
 
   return (
@@ -139,8 +198,13 @@ export default function DecisionCenter() {
             <h1 className="text-2xl font-bold text-foreground tracking-tight">Credit Committee Decision Center</h1>
             <p className="text-sm text-muted-foreground mt-1">Review AI recommendations and make final credit decisions</p>
           </div>
-          <Badge variant="outline" className="gap-1.5 px-3 py-1.5 text-xs border-risk-medium/30 text-risk-medium bg-risk-medium/10">
-            <Clock className="h-3.5 w-3.5" /> Pending Committee Decision
+          <Badge variant="outline" className={`gap-1.5 px-3 py-1.5 text-xs ${
+            submitted
+              ? decision === "approve" ? "border-risk-low/30 text-risk-low bg-risk-low/10" : decision === "reject" ? "border-risk-high/30 text-risk-high bg-risk-high/10" : "border-risk-medium/30 text-risk-medium bg-risk-medium/10"
+              : "border-risk-medium/30 text-risk-medium bg-risk-medium/10"
+          }`}>
+            {submitted ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
+            {submitted ? "Decision Submitted" : "Pending Committee Decision"}
           </Badge>
         </div>
       </motion.div>
@@ -168,13 +232,8 @@ export default function DecisionCenter() {
 
       {/* Three Panel Layout */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-        {/* Left Panel - Application Summary */}
-        <motion.div
-          className="xl:col-span-3 space-y-4"
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.15 }}
-        >
+        {/* Left Panel */}
+        <motion.div className="xl:col-span-3 space-y-4" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }}>
           <Card className="border-border/50">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
@@ -198,14 +257,10 @@ export default function DecisionCenter() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">AI Risk Score</span>
-                  <span className={`text-xl font-bold ${getRiskColor(applicationData.aiRiskScore)}`}>
-                    {applicationData.aiRiskScore}
-                  </span>
+                  <span className={`text-xl font-bold ${getRiskColor(applicationData.aiRiskScore)}`}>{applicationData.aiRiskScore}</span>
                 </div>
                 <Progress value={applicationData.aiRiskScore} className="h-2" />
-                <p className={`text-[10px] font-semibold ${getRiskColor(applicationData.aiRiskScore)}`}>
-                  {getRiskLabel(applicationData.aiRiskScore)}
-                </p>
+                <p className={`text-[10px] font-semibold ${getRiskColor(applicationData.aiRiskScore)}`}>{getRiskLabel(applicationData.aiRiskScore)}</p>
               </div>
               <div className="p-3 rounded-lg bg-risk-medium/10 border border-risk-medium/20">
                 <div className="flex items-center gap-2">
@@ -217,7 +272,6 @@ export default function DecisionCenter() {
             </CardContent>
           </Card>
 
-          {/* Approval Workflow */}
           <Card className="border-border/50">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold">Approval Workflow</CardTitle>
@@ -236,18 +290,11 @@ export default function DecisionCenter() {
                       <p className="text-xs font-semibold text-foreground">{stage.role}</p>
                       <p className="text-[10px] text-muted-foreground">{stage.user}</p>
                       <p className="text-[10px] text-muted-foreground">{stage.timestamp}</p>
-                      <Badge
-                        variant="outline"
-                        className={`mt-1 text-[9px] ${
-                          stage.status === "completed"
-                            ? "border-risk-low/30 text-risk-low"
-                            : stage.status === "in_progress"
-                            ? "border-risk-medium/30 text-risk-medium"
-                            : "border-border text-muted-foreground"
-                        }`}
-                      >
-                        {stage.decision}
-                      </Badge>
+                      <Badge variant="outline" className={`mt-1 text-[9px] ${
+                        stage.status === "completed" ? "border-risk-low/30 text-risk-low" :
+                        stage.status === "in_progress" ? "border-risk-medium/30 text-risk-medium" :
+                        "border-border text-muted-foreground"
+                      }`}>{stage.decision}</Badge>
                     </div>
                   </div>
                 ))}
@@ -256,13 +303,8 @@ export default function DecisionCenter() {
           </Card>
         </motion.div>
 
-        {/* Center Panel - CAM Summary */}
-        <motion.div
-          className="xl:col-span-5 space-y-4"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
+        {/* Center Panel */}
+        <motion.div className="xl:col-span-5 space-y-4" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <Card className="border-border/50">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold">CAM Summary</CardTitle>
@@ -272,11 +314,8 @@ export default function DecisionCenter() {
               <Accordion type="multiple" defaultValue={["overview", "financials", "risks"]}>
                 <AccordionItem value="overview">
                   <AccordionTrigger className="text-xs font-semibold py-3">Company Overview</AccordionTrigger>
-                  <AccordionContent>
-                    <p className="text-xs text-muted-foreground leading-relaxed">{camSummary.overview}</p>
-                  </AccordionContent>
+                  <AccordionContent><p className="text-xs text-muted-foreground leading-relaxed">{camSummary.overview}</p></AccordionContent>
                 </AccordionItem>
-
                 <AccordionItem value="financials">
                   <AccordionTrigger className="text-xs font-semibold py-3">Financial Highlights</AccordionTrigger>
                   <AccordionContent>
@@ -290,42 +329,34 @@ export default function DecisionCenter() {
                     </div>
                   </AccordionContent>
                 </AccordionItem>
-
                 <AccordionItem value="risks">
                   <AccordionTrigger className="text-xs font-semibold py-3">Key Risks</AccordionTrigger>
                   <AccordionContent>
                     <ul className="space-y-2">
                       {camSummary.risks.map((r, i) => (
                         <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
-                          <AlertTriangle className="h-3.5 w-3.5 text-risk-medium shrink-0 mt-0.5" />
-                          {r}
+                          <AlertTriangle className="h-3.5 w-3.5 text-risk-medium shrink-0 mt-0.5" />{r}
                         </li>
                       ))}
                     </ul>
                   </AccordionContent>
                 </AccordionItem>
-
                 <AccordionItem value="litigation">
                   <AccordionTrigger className="text-xs font-semibold py-3">Litigation Findings</AccordionTrigger>
                   <AccordionContent>
                     <ul className="space-y-2">
                       {camSummary.litigation.map((l, i) => (
                         <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
-                          <Shield className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
-                          {l}
+                          <Shield className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />{l}
                         </li>
                       ))}
                     </ul>
                   </AccordionContent>
                 </AccordionItem>
-
                 <AccordionItem value="sector">
                   <AccordionTrigger className="text-xs font-semibold py-3">Sector Outlook</AccordionTrigger>
-                  <AccordionContent>
-                    <p className="text-xs text-muted-foreground leading-relaxed">{camSummary.sectorOutlook}</p>
-                  </AccordionContent>
+                  <AccordionContent><p className="text-xs text-muted-foreground leading-relaxed">{camSummary.sectorOutlook}</p></AccordionContent>
                 </AccordionItem>
-
                 <AccordionItem value="ai-explanation">
                   <AccordionTrigger className="text-xs font-semibold py-3">AI Risk Explanation</AccordionTrigger>
                   <AccordionContent>
@@ -342,24 +373,18 @@ export default function DecisionCenter() {
             </CardContent>
           </Card>
 
-          {/* Decision Explanation */}
           <Card className="border-border/50">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold">Decision Explanation</CardTitle>
-            </CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold">Decision Explanation</CardTitle></CardHeader>
             <CardContent>
               <div className="p-3 rounded-lg bg-muted/30 border border-border/50 space-y-3">
                 <p className="text-xs font-semibold text-foreground">Why was this decision recommended?</p>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  AI recommended conditional approval due to litigation risk and DSCR concerns.
-                </p>
+                <p className="text-xs text-muted-foreground leading-relaxed">AI recommended conditional approval due to litigation risk and DSCR concerns.</p>
                 <Separator />
                 <p className="text-xs font-semibold text-foreground">Committee rationale:</p>
                 <ul className="space-y-1.5">
                   {["Collateral value exceeds loan exposure (1.4x coverage)", "Industry outlook improving — 8% growth forecast", "Promoter reputation strong with 12-year track record", "Litigation exposure manageable at ₹8.5 Cr against ₹85 Cr net worth"].map((r, i) => (
                     <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-risk-low shrink-0 mt-0.5" />
-                      {r}
+                      <CheckCircle2 className="h-3.5 w-3.5 text-risk-low shrink-0 mt-0.5" />{r}
                     </li>
                   ))}
                 </ul>
@@ -367,18 +392,15 @@ export default function DecisionCenter() {
             </CardContent>
           </Card>
 
-          {/* Audit Trail */}
           <Card className="border-border/50">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold">Decision Audit Trail</CardTitle>
-            </CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold">Decision Audit Trail</CardTitle></CardHeader>
             <CardContent>
               <div className="space-y-0">
-                {auditTrail.map((entry, i) => (
+                {trailEntries.map((entry, i) => (
                   <div key={i} className="flex gap-3 group">
                     <div className="flex flex-col items-center">
                       <div className="h-2 w-2 rounded-full bg-primary mt-1.5" />
-                      {i < auditTrail.length - 1 && <div className="w-0.5 flex-1 bg-border" />}
+                      {i < trailEntries.length - 1 && <div className="w-0.5 flex-1 bg-border" />}
                     </div>
                     <div className="pb-3">
                       <div className="flex items-center gap-2">
@@ -394,14 +416,8 @@ export default function DecisionCenter() {
           </Card>
         </motion.div>
 
-        {/* Right Panel - Decision Controls */}
-        <motion.div
-          className="xl:col-span-4 space-y-4"
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.25 }}
-        >
-          {/* Manual Decision */}
+        {/* Right Panel */}
+        <motion.div className="xl:col-span-4 space-y-4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.25 }}>
           <Card className="border-border/50">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold">Manual Decision Controls</CardTitle>
@@ -417,10 +433,11 @@ export default function DecisionCenter() {
                 ].map((opt) => (
                   <button
                     key={opt.value}
-                    onClick={() => setDecision(opt.value)}
-                    className={`flex items-center gap-2 p-3 rounded-lg border text-xs font-semibold transition-all ${
-                      decision === opt.value ? `${opt.color} ring-2 ring-offset-1 ring-offset-background` : "border-border bg-muted/20 text-muted-foreground hover:bg-muted/40"
-                    } ${decision === opt.value ? `ring-current` : ""}`}
+                    onClick={() => { setDecision(opt.value); setSubmitted(false); }}
+                    disabled={submitted}
+                    className={`flex items-center gap-2 p-3 rounded-lg border text-xs font-semibold transition-all disabled:opacity-50 ${
+                      decision === opt.value ? `${opt.color} ring-2 ring-offset-1 ring-offset-background ring-current` : "border-border bg-muted/20 text-muted-foreground hover:bg-muted/40"
+                    }`}
                   >
                     <opt.icon className="h-4 w-4" />
                     {opt.label}
@@ -435,7 +452,8 @@ export default function DecisionCenter() {
                     <button
                       key={reason}
                       onClick={() => toggleReason(reason)}
-                      className={`px-2.5 py-1 rounded-full text-[10px] font-medium transition-all border ${
+                      disabled={submitted}
+                      className={`px-2.5 py-1 rounded-full text-[10px] font-medium transition-all border disabled:opacity-50 ${
                         selectedReasons.includes(reason)
                           ? "bg-primary/15 text-primary border-primary/30"
                           : "bg-muted/30 text-muted-foreground border-border hover:bg-muted/50"
@@ -454,16 +472,14 @@ export default function DecisionCenter() {
                   onChange={(e) => setComment(e.target.value)}
                   placeholder="Enter detailed decision rationale..."
                   className="text-xs min-h-[80px] resize-none"
+                  disabled={submitted}
                 />
               </div>
             </CardContent>
           </Card>
 
-          {/* Risk Override */}
           <Card className="border-border/50">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold">Risk Override Simulation</CardTitle>
-            </CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold">Risk Override Simulation</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -478,7 +494,7 @@ export default function DecisionCenter() {
               </div>
               <div>
                 <label className="text-[10px] text-muted-foreground mb-1 block">Manual Adjustment ({riskAdjustment[0] > 0 ? "+" : ""}{riskAdjustment[0]})</label>
-                <Slider value={riskAdjustment} onValueChange={setRiskAdjustment} min={-30} max={30} step={1} className="py-2" />
+                <Slider value={riskAdjustment} onValueChange={setRiskAdjustment} min={-30} max={30} step={1} className="py-2" disabled={submitted} />
               </div>
               {riskAdjustment[0] !== 0 && (
                 <div className="p-2 rounded-lg bg-risk-medium/10 border border-risk-medium/20">
@@ -487,17 +503,15 @@ export default function DecisionCenter() {
                   </p>
                 </div>
               )}
-
               <Separator />
-
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[10px] text-muted-foreground mb-1 block">Approved Amount (₹ Cr)</label>
-                  <Input value={approvedAmount} onChange={(e) => setApprovedAmount(e.target.value)} className="text-xs h-8" />
+                  <Input value={approvedAmount} onChange={(e) => setApprovedAmount(e.target.value)} className="text-xs h-8" disabled={submitted} />
                 </div>
                 <div>
                   <label className="text-[10px] text-muted-foreground mb-1 block">Interest Rate (%)</label>
-                  <Input value={interestRate} onChange={(e) => setInterestRate(e.target.value)} className="text-xs h-8" />
+                  <Input value={interestRate} onChange={(e) => setInterestRate(e.target.value)} className="text-xs h-8" disabled={submitted} />
                 </div>
               </div>
             </CardContent>
@@ -519,33 +533,26 @@ export default function DecisionCenter() {
                       <p className={`text-xl font-bold mt-1 ${
                         decision === "approve" ? "text-risk-low" :
                         decision === "conditional" ? "text-risk-medium" :
-                        decision === "reject" ? "text-risk-high" :
-                        "text-primary"
+                        decision === "reject" ? "text-risk-high" : "text-primary"
                       }`}>
                         {decision === "approve" ? "APPROVED" : decision === "conditional" ? "CONDITIONAL APPROVAL" : decision === "reject" ? "REJECTED" : "SENT FOR RE-REVIEW"}
                       </p>
                     </div>
                     <Separator />
                     <div className="grid grid-cols-2 gap-2 text-center">
-                      <div>
-                        <p className="text-[10px] text-muted-foreground">Loan Amount</p>
-                        <p className="text-sm font-bold text-foreground">₹{approvedAmount} Cr</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] text-muted-foreground">Interest Rate</p>
-                        <p className="text-sm font-bold text-foreground">{interestRate}%</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] text-muted-foreground">Risk Premium</p>
-                        <p className="text-sm font-bold text-foreground">1.2%</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] text-muted-foreground">Confidence</p>
-                        <p className="text-sm font-bold text-risk-low">High</p>
-                      </div>
+                      <div><p className="text-[10px] text-muted-foreground">Loan Amount</p><p className="text-sm font-bold text-foreground">₹{approvedAmount} Cr</p></div>
+                      <div><p className="text-[10px] text-muted-foreground">Interest Rate</p><p className="text-sm font-bold text-foreground">{interestRate}%</p></div>
+                      <div><p className="text-[10px] text-muted-foreground">Risk Premium</p><p className="text-sm font-bold text-foreground">1.2%</p></div>
+                      <div><p className="text-[10px] text-muted-foreground">Confidence</p><p className="text-sm font-bold text-risk-low">High</p></div>
                     </div>
-                    <Button className="w-full gap-2 text-xs" size="sm">
-                      <Send className="h-3.5 w-3.5" /> Submit Decision
+                    <Button
+                      className="w-full gap-2 text-xs"
+                      size="sm"
+                      onClick={handleSubmitDecision}
+                      disabled={submitting || submitted}
+                    >
+                      {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : submitted ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Send className="h-3.5 w-3.5" />}
+                      {submitting ? "Submitting..." : submitted ? "Decision Submitted" : "Submit Decision"}
                     </Button>
                   </CardContent>
                 </Card>
@@ -563,7 +570,7 @@ export default function DecisionCenter() {
             <CardContent className="space-y-3">
               <ScrollArea className="max-h-[250px]">
                 <div className="space-y-3 pr-2">
-                  {existingComments.map((c, i) => (
+                  {comments.map((c, i) => (
                     <div key={i} className="p-2.5 rounded-lg bg-muted/30 border border-border/50">
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-1.5">
@@ -586,11 +593,12 @@ export default function DecisionCenter() {
                   onChange={(e) => setNewComment(e.target.value)}
                   placeholder="Add a comment... Use @mention"
                   className="text-xs h-8 flex-1"
+                  onKeyDown={(e) => e.key === "Enter" && handleSendComment()}
                 />
-                <Button size="sm" variant="outline" className="h-8 px-2">
+                <Button size="sm" variant="outline" className="h-8 px-2" onClick={handleAttach}>
                   <Paperclip className="h-3.5 w-3.5" />
                 </Button>
-                <Button size="sm" className="h-8 px-3 text-xs">Send</Button>
+                <Button size="sm" className="h-8 px-3 text-xs" onClick={handleSendComment}>Send</Button>
               </div>
             </CardContent>
           </Card>
@@ -603,10 +611,7 @@ export default function DecisionCenter() {
 function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div className="flex items-center justify-between">
-      <div className="flex items-center gap-2 text-muted-foreground">
-        {icon}
-        <span className="text-xs">{label}</span>
-      </div>
+      <div className="flex items-center gap-2 text-muted-foreground">{icon}<span className="text-xs">{label}</span></div>
       <span className="text-xs font-semibold text-foreground">{value}</span>
     </div>
   );

@@ -1,12 +1,24 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, MoreHorizontal, Search, Mail, Shield, CheckCircle, XCircle } from "lucide-react";
+import { Plus, MoreHorizontal, Search, Mail, Shield, CheckCircle, XCircle, Trash2, Edit, Ban, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { useToast } from "@/hooks/use-toast";
 
-const users = [
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+  lastLogin: string;
+  department: string;
+}
+
+const initialUsers: User[] = [
   { id: 1, name: "Rajesh Kumar", email: "rajesh.kumar@intellicredit.com", role: "Admin", status: "Active", lastLogin: "2 hours ago", department: "Credit Risk" },
   { id: 2, name: "Priya Sharma", email: "priya.sharma@intellicredit.com", role: "Credit Officer", status: "Active", lastLogin: "1 hour ago", department: "Corporate Banking" },
   { id: 3, name: "Amit Patel", email: "amit.patel@intellicredit.com", role: "Credit Officer", status: "Active", lastLogin: "30 min ago", department: "Credit Risk" },
@@ -24,7 +36,47 @@ const roleColors: Record<string, string> = {
 
 export function UserManagement() {
   const [search, setSearch] = useState("");
+  const [users, setUsers] = useState(initialUsers);
+  const [inviteName, setInviteName] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("");
+  const [inviteDept, setInviteDept] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const { toast } = useToast();
+
   const filtered = users.filter(u => u.name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase()));
+
+  const handleInvite = () => {
+    if (!inviteName || !inviteEmail || !inviteRole) {
+      toast({ title: "Validation Error", description: "Please fill in all required fields.", variant: "destructive" });
+      return;
+    }
+    const newUser: User = {
+      id: Date.now(),
+      name: inviteName,
+      email: inviteEmail,
+      role: inviteRole === "admin" ? "Admin" : inviteRole === "credit_officer" ? "Credit Officer" : "Viewer",
+      status: "Active",
+      lastLogin: "Never",
+      department: inviteDept || "Unassigned",
+    };
+    setUsers(prev => [...prev, newUser]);
+    setInviteName(""); setInviteEmail(""); setInviteRole(""); setInviteDept("");
+    setDialogOpen(false);
+    toast({ title: "Invitation Sent", description: `${inviteName} has been invited as ${newUser.role}.` });
+  };
+
+  const toggleStatus = (id: number) => {
+    setUsers(prev => prev.map(u => u.id === id ? { ...u, status: u.status === "Active" ? "Inactive" : "Active" } : u));
+    const user = users.find(u => u.id === id);
+    toast({ title: "Status Updated", description: `${user?.name} is now ${user?.status === "Active" ? "Inactive" : "Active"}.` });
+  };
+
+  const removeUser = (id: number) => {
+    const user = users.find(u => u.id === id);
+    setUsers(prev => prev.filter(u => u.id !== id));
+    toast({ title: "User Removed", description: `${user?.name} has been removed from the system.` });
+  };
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
@@ -33,7 +85,7 @@ export function UserManagement() {
           <Search className="h-3.5 w-3.5 text-muted-foreground" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search users..." className="bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none w-full" />
         </div>
-        <Dialog>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-2 bg-primary text-primary-foreground">
               <Plus className="h-4 w-4" /> Add User
@@ -46,15 +98,15 @@ export function UserManagement() {
             <div className="space-y-4 pt-2">
               <div className="space-y-2">
                 <label className="text-xs font-medium text-muted-foreground">Full Name</label>
-                <Input placeholder="Enter full name" className="bg-muted/50 border-border/50 text-foreground" />
+                <Input value={inviteName} onChange={e => setInviteName(e.target.value)} placeholder="Enter full name" className="bg-muted/50 border-border/50 text-foreground" />
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-medium text-muted-foreground">Email</label>
-                <Input placeholder="name@company.com" className="bg-muted/50 border-border/50 text-foreground" />
+                <Input value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="name@company.com" className="bg-muted/50 border-border/50 text-foreground" />
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-medium text-muted-foreground">Role</label>
-                <Select>
+                <Select value={inviteRole} onValueChange={setInviteRole}>
                   <SelectTrigger className="bg-muted/50 border-border/50 text-foreground"><SelectValue placeholder="Select role" /></SelectTrigger>
                   <SelectContent className="bg-popover border-border">
                     <SelectItem value="admin">Admin</SelectItem>
@@ -65,9 +117,9 @@ export function UserManagement() {
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-medium text-muted-foreground">Department</label>
-                <Input placeholder="e.g., Credit Risk" className="bg-muted/50 border-border/50 text-foreground" />
+                <Input value={inviteDept} onChange={e => setInviteDept(e.target.value)} placeholder="e.g., Credit Risk" className="bg-muted/50 border-border/50 text-foreground" />
               </div>
-              <Button className="w-full bg-primary text-primary-foreground gap-2"><Mail className="h-4 w-4" /> Send Invitation</Button>
+              <Button className="w-full bg-primary text-primary-foreground gap-2" onClick={handleInvite}><Mail className="h-4 w-4" /> Send Invitation</Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -97,7 +149,7 @@ export function UserManagement() {
                     </div>
                   </div>
                 </td>
-                <td className="p-3"><span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${roleColors[u.role]}`}>{u.role}</span></td>
+                <td className="p-3"><span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${roleColors[u.role] || roleColors.Viewer}`}>{u.role}</span></td>
                 <td className="p-3 text-muted-foreground text-xs">{u.department}</td>
                 <td className="p-3">
                   <div className="flex items-center gap-1.5">
@@ -106,7 +158,28 @@ export function UserManagement() {
                   </div>
                 </td>
                 <td className="p-3 text-xs text-muted-foreground">{u.lastLogin}</td>
-                <td className="p-3"><MoreHorizontal className="h-4 w-4 text-muted-foreground cursor-pointer hover:text-foreground" /></td>
+                <td className="p-3">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="p-1 rounded hover:bg-muted/50">
+                        <MoreHorizontal className="h-4 w-4 text-muted-foreground cursor-pointer hover:text-foreground" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => toast({ title: "Edit User", description: `Editing ${u.name}'s profile.` })}>
+                        <Edit className="h-3.5 w-3.5 mr-2" /> Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => toggleStatus(u.id)}>
+                        {u.status === "Active" ? <Ban className="h-3.5 w-3.5 mr-2" /> : <UserCheck className="h-3.5 w-3.5 mr-2" />}
+                        {u.status === "Active" ? "Deactivate" : "Activate"}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => removeUser(u.id)} className="text-risk-high focus:text-risk-high">
+                        <Trash2 className="h-3.5 w-3.5 mr-2" /> Remove
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </td>
               </motion.tr>
             ))}
           </tbody>

@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Search, Download, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 
 const logs = [
   { id: 1, timestamp: "2026-03-03 14:32:15", user: "Rajesh Kumar", action: "Updated risk threshold", resource: "Auto-Reject Threshold → 85", level: "config", ip: "192.168.1.45" },
@@ -26,7 +27,31 @@ const levelStyles: Record<string, string> = {
 
 export function AuditLogs() {
   const [filter, setFilter] = useState("all");
-  const filtered = filter === "all" ? logs : logs.filter(l => l.level === filter);
+  const [search, setSearch] = useState("");
+  const { toast } = useToast();
+
+  const filtered = logs
+    .filter(l => filter === "all" || l.level === filter)
+    .filter(l => {
+      if (!search) return true;
+      const q = search.toLowerCase();
+      return l.user.toLowerCase().includes(q) || l.action.toLowerCase().includes(q) || l.resource.toLowerCase().includes(q);
+    });
+
+  const handleExport = () => {
+    const csv = [
+      "Timestamp,User,Action,Resource,Type,IP",
+      ...filtered.map(l => `${l.timestamp},${l.user},${l.action},"${l.resource}",${l.level},${l.ip}`)
+    ].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "audit_logs.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: "Export Complete", description: `${filtered.length} audit log entries exported as CSV.` });
+  };
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
@@ -34,7 +59,12 @@ export function AuditLogs() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-1.5 border border-border/50">
             <Search className="h-3.5 w-3.5 text-muted-foreground" />
-            <input placeholder="Search logs..." className="bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none w-48" />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search logs..."
+              className="bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none w-48"
+            />
           </div>
           <Select value={filter} onValueChange={setFilter}>
             <SelectTrigger className="w-36 bg-muted/50 border-border/50 text-foreground h-9 text-xs">
@@ -50,7 +80,7 @@ export function AuditLogs() {
             </SelectContent>
           </Select>
         </div>
-        <Button variant="outline" size="sm" className="gap-2 border-border/50 text-muted-foreground hover:text-foreground">
+        <Button variant="outline" size="sm" className="gap-2 border-border/50 text-muted-foreground hover:text-foreground" onClick={handleExport}>
           <Download className="h-3.5 w-3.5" /> Export CSV
         </Button>
       </div>
@@ -65,19 +95,25 @@ export function AuditLogs() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((log, i) => (
-              <motion.tr key={log.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }}
-                className="border-b border-border/30 hover:bg-muted/20 transition-colors">
-                <td className="p-3 text-[11px] text-muted-foreground font-mono whitespace-nowrap">{log.timestamp}</td>
-                <td className="p-3 text-xs font-medium text-foreground whitespace-nowrap">{log.user}</td>
-                <td className="p-3 text-xs text-foreground">{log.action}</td>
-                <td className="p-3 text-xs text-muted-foreground max-w-[200px] truncate">{log.resource}</td>
-                <td className="p-3">
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize ${levelStyles[log.level]}`}>{log.level}</span>
-                </td>
-                <td className="p-3 text-[11px] text-muted-foreground font-mono">{log.ip}</td>
-              </motion.tr>
-            ))}
+            {filtered.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="p-8 text-center text-sm text-muted-foreground">No logs matching your criteria.</td>
+              </tr>
+            ) : (
+              filtered.map((log, i) => (
+                <motion.tr key={log.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }}
+                  className="border-b border-border/30 hover:bg-muted/20 transition-colors">
+                  <td className="p-3 text-[11px] text-muted-foreground font-mono whitespace-nowrap">{log.timestamp}</td>
+                  <td className="p-3 text-xs font-medium text-foreground whitespace-nowrap">{log.user}</td>
+                  <td className="p-3 text-xs text-foreground">{log.action}</td>
+                  <td className="p-3 text-xs text-muted-foreground max-w-[200px] truncate">{log.resource}</td>
+                  <td className="p-3">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize ${levelStyles[log.level]}`}>{log.level}</span>
+                  </td>
+                  <td className="p-3 text-[11px] text-muted-foreground font-mono">{log.ip}</td>
+                </motion.tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
