@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Upload, FileCheck, AlertTriangle, XCircle, ChevronRight, File, Eye, Trash2, CheckCircle2, ShieldCheck } from "lucide-react";
+import { Upload, FileCheck, AlertTriangle, XCircle, File, Eye, Trash2, CheckCircle2, ShieldCheck, RotateCcw, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RiskBadge } from "@/components/ui/risk-badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
 
 const documentTypes = [
   "Certificate of Incorporation",
@@ -30,12 +32,12 @@ interface DocFile {
   progress: number;
 }
 
-const mockDocs: DocFile[] = [
+const initialMockDocs: DocFile[] = [
   { id: "1", name: "Certificate_of_Incorporation.pdf", type: "Certificate of Incorporation", size: "2.4 MB", status: "verified", progress: 100 },
   { id: "2", name: "Company_PAN.pdf", type: "Company PAN", size: "1.1 MB", status: "verified", progress: 100 },
   { id: "3", name: "GST_Registration.pdf", type: "GST Registration", size: "890 KB", status: "verified", progress: 100 },
   { id: "4", name: "MOA_TataSteel.pdf", type: "Memorandum of Association (MOA)", size: "5.2 MB", status: "pending", progress: 100 },
-  { id: "5", name: "AOA_TataSteel.pdf", type: "Articles of Association (AOA)", size: "3.8 MB", status: "verified", progress: 100 },
+  { id: "5", name: "AOA_TataSteel.pdf", type: "Articles of Association (AOA)", size: "verified", progress: 100, status: "verified" },
   { id: "6", name: "Director_KYC_Bundle.zip", type: "Director KYC", size: "8.1 MB", status: "failed", progress: 100 },
 ];
 
@@ -74,6 +76,7 @@ function StatusIcon({ status }: { status: string }) {
   if (status === "verified") return <FileCheck className="h-4 w-4 text-risk-low" />;
   if (status === "pending") return <AlertTriangle className="h-4 w-4 text-risk-medium" />;
   if (status === "failed") return <XCircle className="h-4 w-4 text-risk-high" />;
+  if (status === "uploading") return <Loader2 className="h-4 w-4 text-primary animate-spin" />;
   return <File className="h-4 w-4 text-muted-foreground" />;
 }
 
@@ -84,12 +87,89 @@ function ValidationIcon({ status }: { status: "pass" | "warning" | "fail" }) {
 }
 
 export default function DocumentVerification() {
-  const [docs] = useState<DocFile[]>(mockDocs);
+  const [docs, setDocs] = useState<DocFile[]>(initialMockDocs);
   const [dragOver, setDragOver] = useState(false);
+  const [viewingDoc, setViewingDoc] = useState<DocFile | null>(null);
+  const [verifying, setVerifying] = useState(false);
+  const { toast } = useToast();
 
   const verified = docs.filter(d => d.status === "verified").length;
   const pending = docs.filter(d => d.status === "pending").length;
   const failed = docs.filter(d => d.status === "failed").length;
+
+  const handleFileDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length === 0) return;
+    
+    const newDocs: DocFile[] = files.map((f, i) => ({
+      id: `new-${Date.now()}-${i}`,
+      name: f.name,
+      type: "Uploaded Document",
+      size: `${(f.size / (1024 * 1024)).toFixed(1)} MB`,
+      status: "uploading" as const,
+      progress: 0,
+    }));
+    setDocs(prev => [...prev, ...newDocs]);
+    toast({ title: "Uploading", description: `${files.length} file(s) being uploaded...` });
+    
+    setTimeout(() => {
+      setDocs(prev => prev.map(d => newDocs.find(nd => nd.id === d.id) ? { ...d, status: "pending" as const, progress: 100 } : d));
+      toast({ title: "Upload Complete", description: `${files.length} file(s) uploaded. Run verification to validate.` });
+    }, 2000);
+  }, [toast]);
+
+  const handleFileInput = useCallback(() => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.multiple = true;
+    input.accept = ".pdf,.jpg,.png";
+    input.onchange = (e) => {
+      const files = Array.from((e.target as HTMLInputElement).files || []);
+      if (files.length === 0) return;
+      const newDocs: DocFile[] = files.map((f, i) => ({
+        id: `new-${Date.now()}-${i}`,
+        name: f.name,
+        type: "Uploaded Document",
+        size: `${(f.size / (1024 * 1024)).toFixed(1)} MB`,
+        status: "uploading" as const,
+        progress: 0,
+      }));
+      setDocs(prev => [...prev, ...newDocs]);
+      toast({ title: "Uploading", description: `${files.length} file(s) being uploaded...` });
+      setTimeout(() => {
+        setDocs(prev => prev.map(d => newDocs.find(nd => nd.id === d.id) ? { ...d, status: "pending" as const, progress: 100 } : d));
+        toast({ title: "Upload Complete", description: `${files.length} file(s) uploaded successfully.` });
+      }, 2000);
+    };
+    input.click();
+  }, [toast]);
+
+  const removeDoc = (id: string) => {
+    const doc = docs.find(d => d.id === id);
+    setDocs(prev => prev.filter(d => d.id !== id));
+    toast({ title: "Document Removed", description: `${doc?.name} has been removed.` });
+  };
+
+  const retryDoc = (id: string) => {
+    setDocs(prev => prev.map(d => d.id === id ? { ...d, status: "uploading" as const } : d));
+    toast({ title: "Retrying", description: "Re-processing document..." });
+    setTimeout(() => {
+      setDocs(prev => prev.map(d => d.id === id ? { ...d, status: "verified" as const } : d));
+      toast({ title: "Verified", description: "Document verification successful." });
+    }, 2500);
+  };
+
+  const runFullVerification = () => {
+    setVerifying(true);
+    toast({ title: "Verification Started", description: "Running full document verification..." });
+    setTimeout(() => {
+      setDocs(prev => prev.map(d => d.status === "pending" ? { ...d, status: "verified" as const } : d));
+      setVerifying(false);
+      toast({ title: "Verification Complete", description: "All pending documents have been verified." });
+    }, 3000);
+  };
 
   return (
     <div className="space-y-6 animate-slide-up">
@@ -99,9 +179,9 @@ export default function DocumentVerification() {
           <h1 className="text-2xl font-bold text-foreground">Document Verification</h1>
           <p className="text-sm text-muted-foreground mt-1">Verify corporate compliance documents before credit analysis</p>
         </div>
-        <Button className="gap-2">
-          <ShieldCheck className="h-4 w-4" />
-          Run Full Verification
+        <Button className="gap-2" onClick={runFullVerification} disabled={verifying}>
+          {verifying ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+          {verifying ? "Verifying..." : "Run Full Verification"}
         </Button>
       </div>
 
@@ -140,7 +220,6 @@ export default function DocumentVerification() {
         {/* Upload Tab */}
         <TabsContent value="upload" className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            {/* Upload zone */}
             <Card className="glass-card lg:col-span-1">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm">Upload Documents</CardTitle>
@@ -150,7 +229,8 @@ export default function DocumentVerification() {
                 <div
                   onDragOver={e => { e.preventDefault(); setDragOver(true); }}
                   onDragLeave={() => setDragOver(false)}
-                  onDrop={e => { e.preventDefault(); setDragOver(false); }}
+                  onDrop={handleFileDrop}
+                  onClick={handleFileInput}
                   className={`border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200 cursor-pointer ${
                     dragOver ? "border-primary bg-primary/5" : "border-border/50 hover:border-primary/30"
                   }`}
@@ -170,7 +250,6 @@ export default function DocumentVerification() {
               </CardContent>
             </Card>
 
-            {/* Documents list */}
             <Card className="glass-card lg:col-span-2">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm">Uploaded Documents</CardTitle>
@@ -183,6 +262,7 @@ export default function DocumentVerification() {
                         key={doc.id}
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 10, height: 0 }}
                         transition={{ delay: i * 0.03 }}
                         className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors group"
                       >
@@ -201,14 +281,24 @@ export default function DocumentVerification() {
                           className={`text-[10px] ${
                             doc.status === "verified" ? "bg-risk-low/15 text-risk-low" :
                             doc.status === "pending" ? "bg-risk-medium/15 text-risk-medium" :
+                            doc.status === "uploading" ? "bg-primary/15 text-primary" :
                             "bg-risk-high/15 text-risk-high"
                           }`}
                         >
-                          {doc.status === "verified" ? "✔ Verified" : doc.status === "pending" ? "⚠ Pending" : "❌ Failed"}
+                          {doc.status === "verified" ? "✔ Verified" : doc.status === "pending" ? "⚠ Pending" : doc.status === "uploading" ? "⏳ Uploading" : "❌ Failed"}
                         </Badge>
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button className="p-1.5 rounded-md hover:bg-muted/50"><Eye className="h-3.5 w-3.5 text-muted-foreground" /></button>
-                          <button className="p-1.5 rounded-md hover:bg-muted/50"><Trash2 className="h-3.5 w-3.5 text-muted-foreground" /></button>
+                          <button className="p-1.5 rounded-md hover:bg-muted/50" onClick={() => setViewingDoc(doc)} title="View">
+                            <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                          </button>
+                          {doc.status === "failed" && (
+                            <button className="p-1.5 rounded-md hover:bg-muted/50" onClick={() => retryDoc(doc.id)} title="Retry">
+                              <RotateCcw className="h-3.5 w-3.5 text-muted-foreground" />
+                            </button>
+                          )}
+                          <button className="p-1.5 rounded-md hover:bg-muted/50" onClick={() => removeDoc(doc.id)} title="Delete">
+                            <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                          </button>
                         </div>
                       </motion.div>
                     ))}
@@ -320,7 +410,6 @@ export default function DocumentVerification() {
         {/* Risk Summary Tab */}
         <TabsContent value="summary" className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            {/* Integrity Score */}
             <Card className="glass-card lg:col-span-1">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm">Document Integrity Score</CardTitle>
@@ -345,7 +434,6 @@ export default function DocumentVerification() {
               </CardContent>
             </Card>
 
-            {/* Alerts */}
             <Card className="glass-card lg:col-span-2">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm">Document Alerts</CardTitle>
@@ -405,6 +493,32 @@ export default function DocumentVerification() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Document Viewer Dialog */}
+      <Dialog open={!!viewingDoc} onOpenChange={() => setViewingDoc(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-sm">{viewingDoc?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="h-96 rounded-lg bg-muted/30 border border-border/50 flex items-center justify-center">
+            <div className="text-center space-y-3">
+              <File className="h-16 w-16 mx-auto text-muted-foreground/40" />
+              <div>
+                <p className="text-sm font-medium text-foreground">{viewingDoc?.name}</p>
+                <p className="text-xs text-muted-foreground">{viewingDoc?.type} · {viewingDoc?.size}</p>
+              </div>
+              <Badge variant="secondary" className={`${
+                viewingDoc?.status === "verified" ? "bg-risk-low/15 text-risk-low" :
+                viewingDoc?.status === "pending" ? "bg-risk-medium/15 text-risk-medium" :
+                "bg-risk-high/15 text-risk-high"
+              }`}>
+                Status: {viewingDoc?.status}
+              </Badge>
+              <p className="text-xs text-muted-foreground/60">Document preview with field highlighting will appear here</p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

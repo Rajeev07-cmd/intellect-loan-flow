@@ -1,20 +1,45 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Zap, Eye, EyeOff, ArrowRight } from "lucide-react";
+import { Zap, Eye, EyeOff, ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Login() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    navigate("/dashboard");
+    if (!email || !password) {
+      toast({ title: "Validation Error", description: "Please enter both email and password.", variant: "destructive" });
+      return;
+    }
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      toast({ title: "Welcome back!", description: `Signed in as ${email}` });
+      navigate("/dashboard");
+    }, 1200);
+  };
+
+  const handleForgotPassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetEmail) {
+      toast({ title: "Error", description: "Please enter your email address.", variant: "destructive" });
+      return;
+    }
+    toast({ title: "Reset Link Sent", description: `Password reset instructions sent to ${resetEmail}` });
+    setShowForgotPassword(false);
+    setResetEmail("");
   };
 
   return (
@@ -77,49 +102,81 @@ export default function Login() {
             <span className="text-lg font-bold text-foreground">Intelli-Credit</span>
           </div>
 
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Welcome back</h1>
-            <p className="text-sm text-muted-foreground mt-1">Sign in to your credit appraisal workspace</p>
-          </div>
-
-          <form onSubmit={handleLogin} className="space-y-5">
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Email</label>
-              <Input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@company.com"
-                className="bg-muted/50 border-border/50 h-11 text-foreground placeholder:text-muted-foreground"
-              />
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Password</label>
-                <a href="#" className="text-xs text-primary hover:text-primary/80">Forgot password?</a>
+          {showForgotPassword ? (
+            <>
+              <div>
+                <h1 className="text-2xl font-bold text-foreground">Reset Password</h1>
+                <p className="text-sm text-muted-foreground mt-1">Enter your email to receive a reset link</p>
               </div>
-              <div className="relative">
-                <Input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="bg-muted/50 border-border/50 h-11 pr-10 text-foreground placeholder:text-muted-foreground"
-                />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              <form onSubmit={handleForgotPassword} className="space-y-5">
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Email</label>
+                  <Input
+                    type="email"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    placeholder="name@company.com"
+                    className="bg-muted/50 border-border/50 h-11 text-foreground placeholder:text-muted-foreground"
+                  />
+                </div>
+                <Button type="submit" className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
+                  Send Reset Link <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+                <button type="button" onClick={() => setShowForgotPassword(false)} className="text-xs text-primary hover:text-primary/80 w-full text-center">
+                  Back to Sign In
                 </button>
+              </form>
+            </>
+          ) : (
+            <>
+              <div>
+                <h1 className="text-2xl font-bold text-foreground">Welcome back</h1>
+                <p className="text-sm text-muted-foreground mt-1">Sign in to your credit appraisal workspace</p>
               </div>
-            </div>
 
-            <Button type="submit" className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
-              Sign In <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </form>
+              <form onSubmit={handleLogin} className="space-y-5">
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Email</label>
+                  <Input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@company.com"
+                    className="bg-muted/50 border-border/50 h-11 text-foreground placeholder:text-muted-foreground"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Password</label>
+                    <button type="button" onClick={() => setShowForgotPassword(true)} className="text-xs text-primary hover:text-primary/80">Forgot password?</button>
+                  </div>
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="bg-muted/50 border-border/50 h-11 pr-10 text-foreground placeholder:text-muted-foreground"
+                    />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <Button type="submit" disabled={loading} className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
+                  {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Signing In...</> : <>Sign In <ArrowRight className="ml-2 h-4 w-4" /></>}
+                </Button>
+              </form>
+            </>
+          )}
 
           <div className="text-center">
             <p className="text-xs text-muted-foreground">
-              Protected by enterprise-grade security. <span className="text-primary cursor-pointer">Terms</span> & <span className="text-primary cursor-pointer">Privacy</span>
+              Protected by enterprise-grade security.{" "}
+              <button onClick={() => toast({ title: "Terms of Service", description: "Terms of Service document will open in a new tab." })} className="text-primary cursor-pointer hover:underline">Terms</button>
+              {" & "}
+              <button onClick={() => toast({ title: "Privacy Policy", description: "Privacy Policy document will open in a new tab." })} className="text-primary cursor-pointer hover:underline">Privacy</button>
             </p>
           </div>
         </motion.div>

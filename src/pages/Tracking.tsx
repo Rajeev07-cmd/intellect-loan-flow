@@ -1,5 +1,9 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { CheckCircle, Circle, ArrowRight, Clock, MessageSquare } from "lucide-react";
+import { CheckCircle, Circle, ArrowRight, Clock, MessageSquare, Send } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 
 const pipeline = [
   { stage: "Draft", status: "completed", date: "Feb 15, 2026" },
@@ -10,13 +14,35 @@ const pipeline = [
   { stage: "Final Decision", status: "pending", date: "—" },
 ];
 
-const comments = [
+const initialComments = [
   { author: "Rajesh Kumar", role: "Credit Manager", time: "2 hours ago", text: "GST mismatch flagged. Requesting clarification from CA firm." },
   { author: "Priya Sharma", role: "Risk Analyst", time: "5 hours ago", text: "Collateral valuation report is 6 months old. Needs fresh assessment." },
   { author: "Amit Patel", role: "Sr. Credit Officer", time: "1 day ago", text: "Factory visit completed. Capacity utilization is indeed low at ~40%." },
 ];
 
 export default function Tracking() {
+  const [comments, setComments] = useState(initialComments);
+  const [newComment, setNewComment] = useState("");
+  const { toast } = useToast();
+
+  const handleAddComment = () => {
+    if (!newComment.trim()) {
+      toast({ title: "Error", description: "Please enter a comment.", variant: "destructive" });
+      return;
+    }
+    setComments(prev => [
+      {
+        author: "Rajesh Kumar",
+        role: "Credit Manager",
+        time: "Just now",
+        text: newComment,
+      },
+      ...prev,
+    ]);
+    setNewComment("");
+    toast({ title: "Comment Added", description: "Your note has been posted." });
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -61,9 +87,29 @@ export default function Tracking() {
           <MessageSquare className="h-4 w-4 text-primary" />
           <h3 className="text-sm font-semibold text-foreground">Internal Notes & Comments</h3>
         </div>
+
+        {/* Add Comment */}
+        <div className="flex gap-2 mb-4">
+          <Input
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            placeholder="Add a comment or note..."
+            className="text-sm flex-1"
+            onKeyDown={(e) => e.key === "Enter" && handleAddComment()}
+          />
+          <Button size="sm" className="gap-2" onClick={handleAddComment}>
+            <Send className="h-3.5 w-3.5" /> Send
+          </Button>
+        </div>
+
         <div className="space-y-4">
           {comments.map((c, i) => (
-            <div key={i} className="flex gap-3 p-3 bg-muted/20 rounded-lg">
+            <motion.div
+              key={`${c.author}-${i}`}
+              initial={i === 0 ? { opacity: 0, y: -10 } : {}}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex gap-3 p-3 bg-muted/20 rounded-lg"
+            >
               <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-semibold text-primary flex-shrink-0">
                 {c.author.split(" ").map(n => n[0]).join("")}
               </div>
@@ -75,7 +121,7 @@ export default function Tracking() {
                 </div>
                 <p className="text-sm text-muted-foreground">{c.text}</p>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       </motion.div>

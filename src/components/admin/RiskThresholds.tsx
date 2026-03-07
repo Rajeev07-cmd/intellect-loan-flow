@@ -2,8 +2,8 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Save, RotateCcw, AlertTriangle } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Save, RotateCcw, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface ThresholdConfig {
   label: string;
@@ -41,23 +41,38 @@ const severityStyles = {
 
 export function RiskThresholds() {
   const [thresholds, setThresholds] = useState(defaultThresholds);
+  const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
 
   const updateThreshold = (key: string, value: number) => {
     setThresholds(prev => prev.map(t => t.key === key ? { ...t, value } : t));
   };
 
+  const handleSave = () => {
+    setSaving(true);
+    setTimeout(() => {
+      setSaving(false);
+      toast({ title: "Thresholds Saved", description: "Risk classification thresholds have been updated." });
+    }, 1500);
+  };
+
+  const handleReset = () => {
+    setThresholds(defaultThresholds);
+    toast({ title: "Reset", description: "Risk thresholds restored to defaults." });
+  };
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-      {/* Thresholds */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-foreground">Risk Classification Thresholds</h3>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setThresholds(defaultThresholds)} className="gap-2 border-border/50 text-muted-foreground hover:text-foreground">
+            <Button variant="outline" size="sm" onClick={handleReset} className="gap-2 border-border/50 text-muted-foreground hover:text-foreground">
               <RotateCcw className="h-3.5 w-3.5" /> Reset
             </Button>
-            <Button size="sm" className="gap-2 bg-primary text-primary-foreground">
-              <Save className="h-3.5 w-3.5" /> Save
+            <Button size="sm" className="gap-2 bg-primary text-primary-foreground" onClick={handleSave} disabled={saving}>
+              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+              {saving ? "Saving..." : "Save"}
             </Button>
           </div>
         </div>
@@ -85,7 +100,6 @@ export function RiskThresholds() {
         </div>
       </div>
 
-      {/* Sector Risk Overrides */}
       <div className="space-y-4">
         <h3 className="text-sm font-semibold text-foreground">Sector Risk Overrides</h3>
         <div className="glass-card overflow-hidden">
@@ -98,7 +112,7 @@ export function RiskThresholds() {
               </tr>
             </thead>
             <tbody>
-              {sectorOverrides.map((s, i) => (
+              {sectorOverrides.map((s) => (
                 <tr key={s.sector} className="border-b border-border/30 hover:bg-muted/20 transition-colors">
                   <td className="p-3 text-xs text-foreground font-medium">{s.sector}</td>
                   <td className="p-3">

@@ -2,8 +2,9 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
-import { Save, RotateCcw, Info } from "lucide-react";
+import { Save, RotateCcw, Info, Loader2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { useToast } from "@/hooks/use-toast";
 
 interface WeightConfig {
   name: string;
@@ -22,6 +23,8 @@ const defaultWeights: WeightConfig[] = [
 
 export function ModelWeights() {
   const [weights, setWeights] = useState(defaultWeights);
+  const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
   const total = weights.reduce((s, w) => s + w.weight, 0);
   const isValid = total === 100;
 
@@ -29,7 +32,22 @@ export function ModelWeights() {
     setWeights(prev => prev.map(w => w.key === key ? { ...w, weight: value } : w));
   };
 
-  const reset = () => setWeights(defaultWeights);
+  const reset = () => {
+    setWeights(defaultWeights);
+    toast({ title: "Reset", description: "Model weights restored to defaults." });
+  };
+
+  const handleSave = () => {
+    if (!isValid) {
+      toast({ title: "Invalid Configuration", description: `Total weight must equal 100%. Current: ${total}%`, variant: "destructive" });
+      return;
+    }
+    setSaving(true);
+    setTimeout(() => {
+      setSaving(false);
+      toast({ title: "Configuration Saved", description: "Model weights have been updated successfully." });
+    }, 1500);
+  };
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
@@ -42,19 +60,18 @@ export function ModelWeights() {
           <Button variant="outline" size="sm" onClick={reset} className="gap-2 border-border/50 text-muted-foreground hover:text-foreground">
             <RotateCcw className="h-3.5 w-3.5" /> Reset
           </Button>
-          <Button size="sm" disabled={!isValid} className="gap-2 bg-primary text-primary-foreground disabled:opacity-50">
-            <Save className="h-3.5 w-3.5" /> Save Configuration
+          <Button size="sm" disabled={!isValid || saving} onClick={handleSave} className="gap-2 bg-primary text-primary-foreground disabled:opacity-50">
+            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+            {saving ? "Saving..." : "Save Configuration"}
           </Button>
         </div>
       </div>
 
-      {/* Total indicator */}
       <div className={`glass-card p-4 flex items-center justify-between ${isValid ? "border-risk-low/30" : "border-risk-high/30"}`}>
         <span className="text-xs text-muted-foreground">Total Weight Allocation</span>
         <span className={`text-lg font-bold ${isValid ? "text-risk-low" : "text-risk-high"}`}>{total}%</span>
       </div>
 
-      {/* Weight Sliders */}
       <div className="space-y-3">
         {weights.map((w, i) => (
           <motion.div key={w.key} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
@@ -81,13 +98,7 @@ export function ModelWeights() {
                 <span className="text-xs text-muted-foreground">%</span>
               </div>
             </div>
-            <Slider
-              value={[w.weight]}
-              onValueChange={([v]) => updateWeight(w.key, v)}
-              max={50}
-              step={1}
-              className="mt-1"
-            />
+            <Slider value={[w.weight]} onValueChange={([v]) => updateWeight(w.key, v)} max={50} step={1} className="mt-1" />
             <div className="flex justify-between mt-2">
               <span className="text-[10px] text-muted-foreground">0%</span>
               <span className="text-[10px] text-muted-foreground">50%</span>

@@ -1,35 +1,14 @@
 import {
-  LayoutDashboard,
-  FileText,
-  FileCheck,
-  Shield,
-  BookOpen,
-  GitBranch,
-  Settings,
-  Search,
-  Brain,
-  Gavel,
-  Users,
-  LogOut,
-  ChevronLeft,
-  ChevronRight,
-  Zap,
+  LayoutDashboard, FileText, FileCheck, Shield, BookOpen, GitBranch, Settings,
+  Search, Brain, Gavel, Users, LogOut, ChevronLeft, ChevronRight, Zap,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarFooter,
-  SidebarHeader,
-  useSidebar,
+  Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
+  SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarFooter, SidebarHeader, useSidebar,
 } from "@/components/ui/sidebar";
+import { useToast } from "@/hooks/use-toast";
 
 const mainItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -55,7 +34,14 @@ export function AppSidebar() {
   const { state, toggleSidebar } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const isActive = (path: string) => location.pathname === path;
+
+  const handleLogout = () => {
+    toast({ title: "Signed Out", description: "You have been logged out successfully." });
+    navigate("/login");
+  };
 
   return (
     <Sidebar collapsible="icon" className="border-r border-border/50">
@@ -140,7 +126,9 @@ export function AppSidebar() {
               <p className="text-xs font-medium text-foreground truncate">Rajesh Kumar</p>
               <p className="text-[10px] text-muted-foreground">Credit Manager</p>
             </div>
-            <LogOut className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground cursor-pointer" />
+            <button onClick={handleLogout} title="Sign Out">
+              <LogOut className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground cursor-pointer transition-colors" />
+            </button>
           </div>
         )}
       </SidebarFooter>
