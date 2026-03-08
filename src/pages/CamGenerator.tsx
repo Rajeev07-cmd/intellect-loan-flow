@@ -109,7 +109,10 @@ export default function CamGenerator() {
               return (
                 <button
                   key={item.id}
-                  onClick={() => setActiveSection(item.id)}
+                  onClick={() => {
+                    setActiveSection(item.id);
+                    document.getElementById(item.id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
                   className={`flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-xs font-medium transition-all ${
                     activeSection === item.id
                       ? "bg-primary/10 text-primary border border-primary/20"
@@ -247,8 +250,9 @@ function Section({ title, id, active, children }: { title: string; id: string; a
     <motion.div
       id={id}
       initial={{ opacity: 0.7 }}
-      animate={{ opacity: active === id ? 1 : 0.6 }}
+      animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
+      className="scroll-mt-24"
     >
       <h3 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4">{title}</h3>
       {children}
