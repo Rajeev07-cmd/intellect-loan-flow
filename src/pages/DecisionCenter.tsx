@@ -22,6 +22,7 @@ import { logAuditEvent } from "@/services/auditLog";
 import { createNotification } from "@/services/notifications";
 import { updateWorkflowStatus } from "@/services/workflowStatus";
 import { supabase } from "@/integrations/supabase/client";
+import { getDecisionState, submitManagerDecision, type ManagerDecision, type DecisionState } from "@/services/decisionEngine";
 
 const decisionReasons = [
   "Strong collateral coverage",
@@ -49,6 +50,7 @@ export default function DecisionCenter() {
   const [submitted, setSubmitted] = useState(false);
   const [comments, setComments] = useState<{ user: string; role: string; time: string; text: string; author?: string }[]>([]);
   const [auditTrail, setAuditTrail] = useState<{ time: string; event: string; user: string }[]>([]);
+  const [decisionState, setDecisionState] = useState<DecisionState>({ credit_officer_decision: null, manager_decision: null, final_status: null });
   const { toast } = useToast();
 
   // Initialize from selected application
@@ -62,8 +64,8 @@ export default function DecisionCenter() {
     setRiskAdjustment([0]);
     setSelectedReasons([]);
 
-    // Load audit trail for this application
-    const loadAudit = async () => {
+    // Load audit trail and decision state
+    const loadData = async () => {
       const isUUID = /^[0-9a-f]{8}-/i.test(selectedApplication.id);
       if (!isUUID) {
         setAuditTrail([
@@ -74,6 +76,14 @@ export default function DecisionCenter() {
         return;
       }
       try {
+        // Load decision state
+        const ds = await getDecisionState(selectedApplication.id);
+        setDecisionState(ds);
+        if (ds.manager_decision) {
+          setSubmitted(true);
+          setDecision(ds.manager_decision === "approve" ? "approve" : ds.manager_decision === "reject" ? "reject" : "re-review");
+        }
+
         const { data } = await supabase
           .from("audit_logs")
           .select("*")
@@ -95,7 +105,7 @@ export default function DecisionCenter() {
         setAuditTrail([]);
       }
     };
-    loadAudit();
+    loadData();
   }, [selectedApplication]);
 
   if (!selectedApplication) return <NoApplicationSelected />;
@@ -124,7 +134,7 @@ export default function DecisionCenter() {
 
   const handleSubmitDecision = async () => {
     if (!decision) {
-      toast({ title: "Select a Decision", description: "Please choose Approve, Conditional, Reject, or Re-Review.", variant: "destructive" });
+      toast({ title: "Select a Decision", description: "Please choose Approve, Reject, or Re-Review.", variant: "destructive" });
       return;
     }
     if (selectedReasons.length === 0) {
@@ -133,46 +143,46 @@ export default function DecisionCenter() {
     }
     setSubmitting(true);
 
-    const decisionLabels: Record<string, string> = {
-      approve: "Approved", conditional: "Conditional Approval", reject: "Rejected", "re-review": "Sent for Re-Review"
+    const mgrDecisionMap: Record<string, ManagerDecision> = {
+      approve: "approve", reject: "reject", conditional: "review", "re-review": "review"
     };
-    const decisionLabel = decisionLabels[decision] || decision;
+    const mgrDecision = mgrDecisionMap[decision] || "review";
 
-    // Update database
     const isUUID = /^[0-9a-f]{8}-/i.test(app.id);
     if (isUUID) {
-      const newStatus = decision === "approve" ? "Approved" : decision === "reject" ? "Rejected" : decision === "conditional" ? "Manager Review" : "Manager Review";
       try {
+        await submitManagerDecision(app.id, mgrDecision, app.company);
+
+        // Also update loan terms
         await supabase.from("applications").update({
-          status: newStatus,
-          recommendation: decisionLabel,
           suggested_limit: `₹${approvedAmount} Cr`,
           interest_rate: `${interestRate}%`,
+          recommendation: decision === "approve" ? "Approved" : decision === "reject" ? "Rejected" : "Under Review",
         }).eq("id", app.id);
 
-        await updateWorkflowStatus(app.id, newStatus as any);
-        await logAuditEvent("Manager Decision", `Decision: ${decisionLabel} — ₹${approvedAmount} Cr at ${interestRate}%`, app.id, "Credit Manager");
-        await createNotification(
-          `Decision: ${decisionLabel}`,
-          `${app.company} — ₹${approvedAmount} Cr at ${interestRate}%`,
-          decision === "reject" ? "error" : decision === "approve" ? "info" : "warning",
-          app.id
-        );
+        // Refresh decision state
+        const ds = await getDecisionState(app.id);
+        setDecisionState(ds);
       } catch (e) {
         console.error("Error saving decision:", e);
       }
     }
 
+    const decisionLabels: Record<string, string> = {
+      approve: "Approved", reject: "Rejected", conditional: "Under Review", "re-review": "Sent for Re-Review"
+    };
+    const decisionLabel = decisionLabels[decision] || decision;
+
     // Update local audit trail
     const timeStr = new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
     setAuditTrail(prev => [
-      { time: timeStr, event: `Committee decision: ${decisionLabel} — ₹${approvedAmount} Cr at ${interestRate}%`, user: "Credit Manager" },
+      { time: timeStr, event: `Manager decision: ${decisionLabel} — ₹${approvedAmount} Cr at ${interestRate}%`, user: "Credit Manager" },
       ...prev,
     ]);
 
     setSubmitting(false);
     setSubmitted(true);
-    toast({ title: "Decision Submitted", description: `Final decision: ${decisionLabel}. Loan amount: ₹${approvedAmount} Cr.` });
+    toast({ title: "Decision Submitted", description: `Final decision: ${decisionState.final_status || decisionLabel}. Loan amount: ₹${approvedAmount} Cr.` });
   };
 
   const handleSendComment = () => {
@@ -281,6 +291,45 @@ export default function DecisionCenter() {
                 </div>
                 <p className="text-sm font-bold text-foreground mt-1">{app.recommendation}</p>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Credit Officer Decision Status */}
+          <Card className={`border-2 ${
+            decisionState.credit_officer_decision === "approve" ? "border-risk-low/30 bg-risk-low/5" :
+            decisionState.credit_officer_decision === "reject" ? "border-risk-high/30 bg-risk-high/5" :
+            decisionState.credit_officer_decision === "conditional" ? "border-risk-medium/30 bg-risk-medium/5" :
+            "border-border/50"
+          }`}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <User className="h-4 w-4 text-primary" /> Credit Officer Recommendation
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {decisionState.credit_officer_decision ? (
+                <div className="text-center py-2">
+                  <Badge className={`text-sm px-4 py-1.5 ${
+                    decisionState.credit_officer_decision === "approve" ? "bg-risk-low/15 text-risk-low border-risk-low/30" :
+                    decisionState.credit_officer_decision === "reject" ? "bg-risk-high/15 text-risk-high border-risk-high/30" :
+                    "bg-risk-medium/15 text-risk-medium border-risk-medium/30"
+                  }`} variant="outline">
+                    {decisionState.credit_officer_decision === "approve" ? "✓ Approve" :
+                     decisionState.credit_officer_decision === "reject" ? "✗ Reject" : "⚠ Conditional"}
+                  </Badge>
+                  {decisionState.final_status && (
+                    <div className="mt-3 p-2 rounded-lg bg-muted/30 border border-border/30">
+                      <p className="text-[10px] text-muted-foreground">Final Status</p>
+                      <p className="text-xs font-bold text-foreground">{decisionState.final_status}</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-3">
+                  <Clock className="h-5 w-5 text-muted-foreground mx-auto mb-1" />
+                  <p className="text-xs text-muted-foreground">Awaiting Credit Officer decision</p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
