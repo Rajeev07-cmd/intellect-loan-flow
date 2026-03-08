@@ -29,6 +29,7 @@ const allNavItems: NavItem[] = [
   { title: "CAM Generator", url: "/cam-generator", icon: BookOpen, roles: ["credit_officer", "admin"] },
   { title: "Tracking", url: "/tracking", icon: GitBranch, roles: ["credit_officer", "admin"] },
   { title: "AI Research", url: "/research", icon: Brain, roles: ["credit_officer", "admin"] },
+  { title: "Doc Intelligence", url: "/document-intelligence", icon: FileSearch, roles: ["credit_officer", "admin"] },
   // Manager pages
   { title: "Manager Dashboard", url: "/manager-dashboard", icon: LayoutDashboard, roles: ["manager", "admin"] },
   { title: "Decision Center", url: "/decision-center", icon: Gavel, roles: ["credit_officer", "manager", "admin"] },
