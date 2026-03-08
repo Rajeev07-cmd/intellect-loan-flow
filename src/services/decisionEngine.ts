@@ -37,8 +37,7 @@ export function computeFinalStatus(
   // Manager sends for review
   if (mgrDecision === "review") return "Under Review";
 
-  // CO conditional + Manager reject → Under Review
-  if (coDecision === "conditional" && mgrDecision === "reject") return "Under Review";
+  // Fallback
 
   return "Under Review";
 }
