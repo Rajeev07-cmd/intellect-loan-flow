@@ -82,16 +82,26 @@ export function DevelopersSection() {
                 {dev.description}
               </p>
 
-              <motion.a
-                href={dev.linkedin}
-                target="_blank"
-                rel="noopener noreferrer"
-                whileHover={{ scale: 1.1 }}
-                className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/20 border border-primary/20 transition-colors"
-              >
-                <Linkedin className="h-4 w-4 text-primary" />
-                <span className="text-xs font-medium text-primary">LinkedIn Profile</span>
-              </motion.a>
+              <div className="mt-4 flex items-center gap-2">
+                <motion.a
+                  href={dev.linkedin}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  whileHover={{ scale: 1.1 }}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary/10 hover:bg-primary/20 border border-primary/20 transition-colors"
+                >
+                  <Linkedin className="h-4 w-4 text-primary" />
+                </motion.a>
+                <motion.a
+                  href={dev.github}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  whileHover={{ scale: 1.1 }}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary/10 hover:bg-primary/20 border border-primary/20 transition-colors"
+                >
+                  <Github className="h-4 w-4 text-primary" />
+                </motion.a>
+              </div>
             </motion.div>
           ))}
         </div>
