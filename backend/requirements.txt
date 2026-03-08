@@ -1,0 +1,23 @@
+# Intelli-Credit FastAPI Backend Dependencies
+
+# Core
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+pydantic==2.5.3
+
+# ML & Data
+joblib==1.3.2
+numpy==1.26.3
+pandas==2.1.4
+scikit-learn==1.4.0
+
+# Document Processing
+pytesseract==0.3.10
+pdfplumber==0.10.3
+Pillow==10.2.0
+
+# NLP
+spacy==3.7.2
+
+# CORS
+python-multipart==0.0.6
