@@ -109,16 +109,16 @@ export function AppLayout() {
     };
     const fetchNotifs = async () => {
       try {
-        const dbNotifs = await getNotifications();
+        const dbNotifs = await getNotifications(20, notifRole);
         setNotifs(dbNotifs);
       } catch { /* empty */ }
     };
     fetchApps();
     fetchNotifs();
 
-    const sub = subscribeToNotifications((updated) => setNotifs(updated));
+    const sub = subscribeToNotifications((updated) => setNotifs(updated), notifRole);
     return () => { sub.unsubscribe(); };
-  }, []);
+  }, [notifRole]);
 
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
