@@ -176,6 +176,15 @@ export default function Login() {
                 <p className="text-sm text-muted-foreground mt-1">Sign in to your credit appraisal workspace</p>
               </div>
 
+              {sessionExpired && (
+                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+                  className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive flex items-center gap-2"
+                >
+                  <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  Your session has expired. Please log in again.
+                </motion.div>
+              )}
+
               {/* Role Selection - informational only */}
               <div className="space-y-2">
                 <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Your Role</label>
