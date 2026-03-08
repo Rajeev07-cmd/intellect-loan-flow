@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Building2, Landmark, CreditCard, BadgeCheck } from "lucide-react";
+import { AnimatedValue } from "@/components/ui/animated-value";
 
 const logos = [
   { Icon: Landmark, name: "National Bank" },
