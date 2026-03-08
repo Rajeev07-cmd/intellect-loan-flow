@@ -92,6 +92,15 @@ export default function ManagerDashboard() {
         </ResponsiveContainer>
       </motion.div>
 
+      {/* Portfolio Risk Heatmap */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38 }} className="glass-card p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold text-foreground">Portfolio Risk Heatmap</h3>
+          <p className="text-[10px] text-muted-foreground">Sector × Risk Level Concentration</p>
+        </div>
+        <PortfolioRiskHeatmap />
+      </motion.div>
+
       {/* Loan Approval Queue */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="glass-card overflow-hidden">
         <div className="p-5 border-b border-border/50">
