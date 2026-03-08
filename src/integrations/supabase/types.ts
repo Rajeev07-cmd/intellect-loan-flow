@@ -86,6 +86,50 @@ export type Database = {
         }
         Relationships: []
       }
+      cam_reports: {
+        Row: {
+          application_id: string
+          company_overview: string | null
+          created_at: string
+          financial_analysis: string | null
+          id: string
+          interest_rate: string | null
+          recommendation: string | null
+          risk_analysis: string | null
+          suggested_loan_limit: string | null
+        }
+        Insert: {
+          application_id: string
+          company_overview?: string | null
+          created_at?: string
+          financial_analysis?: string | null
+          id?: string
+          interest_rate?: string | null
+          recommendation?: string | null
+          risk_analysis?: string | null
+          suggested_loan_limit?: string | null
+        }
+        Update: {
+          application_id?: string
+          company_overview?: string | null
+          created_at?: string
+          financial_analysis?: string | null
+          id?: string
+          interest_rate?: string | null
+          recommendation?: string | null
+          risk_analysis?: string | null
+          suggested_loan_limit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cam_reports_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
           application_id: string
@@ -126,6 +170,123 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "documents_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_features: {
+        Row: {
+          application_id: string
+          collateral_score: number | null
+          created_at: string
+          debt_ratio: number | null
+          id: string
+          interest_coverage_ratio: number | null
+          litigation_count: number | null
+          profit_margin: number | null
+          revenue_growth: number | null
+          sector_risk: number | null
+        }
+        Insert: {
+          application_id: string
+          collateral_score?: number | null
+          created_at?: string
+          debt_ratio?: number | null
+          id?: string
+          interest_coverage_ratio?: number | null
+          litigation_count?: number | null
+          profit_margin?: number | null
+          revenue_growth?: number | null
+          sector_risk?: number | null
+        }
+        Update: {
+          application_id?: string
+          collateral_score?: number | null
+          created_at?: string
+          debt_ratio?: number | null
+          id?: string
+          interest_coverage_ratio?: number | null
+          litigation_count?: number | null
+          profit_margin?: number | null
+          revenue_growth?: number | null
+          sector_risk?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_features_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      risk_results: {
+        Row: {
+          application_id: string
+          created_at: string
+          default_probability: number | null
+          explanation: Json | null
+          id: string
+          risk_category: string | null
+          risk_score: number | null
+        }
+        Insert: {
+          application_id: string
+          created_at?: string
+          default_probability?: number | null
+          explanation?: Json | null
+          id?: string
+          risk_category?: string | null
+          risk_score?: number | null
+        }
+        Update: {
+          application_id?: string
+          created_at?: string
+          default_probability?: number | null
+          explanation?: Json | null
+          id?: string
+          risk_category?: string | null
+          risk_score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_results_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_status: {
+        Row: {
+          application_id: string
+          current_stage: string
+          id: string
+          stage_history: Json | null
+          updated_at: string
+        }
+        Insert: {
+          application_id: string
+          current_stage?: string
+          id?: string
+          stage_history?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          application_id?: string
+          current_stage?: string
+          id?: string
+          stage_history?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_status_application_id_fkey"
             columns: ["application_id"]
             isOneToOne: false
             referencedRelation: "applications"
