@@ -78,11 +78,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (session?.user && isSessionExpired()) {
+          await forceLogout();
+          return;
+        }
+
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          // Use setTimeout to avoid potential race conditions
           setTimeout(async () => {
             const profile = await fetchProfile(session.user.id);
             setProfile(profile);
@@ -97,18 +101,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // THEN check for existing session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user && isSessionExpired()) {
+        forceLogout().then(() => setLoading(false));
+        return;
+      }
+
       setSession(session);
       setUser(session?.user ?? null);
 
       if (session?.user) {
+        // Ensure login_time exists for existing sessions
+        if (!localStorage.getItem(SESSION_LOGIN_TIME_KEY)) {
+          localStorage.setItem(SESSION_LOGIN_TIME_KEY, Date.now().toString());
+        }
         const profile = await fetchProfile(session.user.id);
         setProfile(profile);
       }
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
-  }, []);
+    // Periodic check every 60 seconds
+    const intervalId = setInterval(() => {
+      if (isSessionExpired()) {
+        forceLogout();
+      }
+    }, 60_000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearInterval(intervalId);
+    };
+  }, [isSessionExpired, forceLogout]);
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
