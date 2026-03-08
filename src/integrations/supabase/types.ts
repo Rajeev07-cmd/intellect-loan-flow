@@ -86,6 +86,41 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_logs: {
+        Row: {
+          application_id: string | null
+          created_at: string
+          event_description: string
+          event_type: string
+          id: string
+          user_name: string | null
+        }
+        Insert: {
+          application_id?: string | null
+          created_at?: string
+          event_description: string
+          event_type: string
+          id?: string
+          user_name?: string | null
+        }
+        Update: {
+          application_id?: string | null
+          created_at?: string
+          event_description?: string
+          event_type?: string
+          id?: string
+          user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cam_reports: {
         Row: {
           application_id: string
@@ -217,6 +252,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "financial_features_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          application_id: string | null
+          created_at: string
+          description: string
+          id: string
+          is_read: boolean
+          severity: string
+          title: string
+        }
+        Insert: {
+          application_id?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          is_read?: boolean
+          severity?: string
+          title: string
+        }
+        Update: {
+          application_id?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          is_read?: boolean
+          severity?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_application_id_fkey"
             columns: ["application_id"]
             isOneToOne: false
             referencedRelation: "applications"
