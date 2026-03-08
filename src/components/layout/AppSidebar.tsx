@@ -1,6 +1,6 @@
 import {
-  LayoutDashboard, FileText, FileCheck, Shield, BookOpen, GitBranch, Settings,
-  Search, Brain, Gavel, Users, LogOut, ChevronLeft, ChevronRight, Zap,
+  LayoutDashboard, FileText, FileCheck, Shield, BookOpen, GitBranch,
+  Brain, Gavel, Users, LogOut, Zap,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -10,38 +10,49 @@ import {
 } from "@/components/ui/sidebar";
 import { useToast } from "@/hooks/use-toast";
 
-const mainItems = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Applications", url: "/applications", icon: FileText },
-  { title: "Doc Verification", url: "/document-verification", icon: FileCheck },
-  { title: "Risk Engine", url: "/risk-engine", icon: Shield },
-  { title: "CAM Generator", url: "/cam-generator", icon: BookOpen },
-  { title: "Tracking", url: "/tracking", icon: GitBranch },
-  { title: "Decision Center", url: "/decision-center", icon: Gavel },
-];
-
-const toolItems = [
-  { title: "AI Research", url: "/research", icon: Brain },
-  { title: "Search", url: "/search", icon: Search },
-];
-
-const adminItems = [
-  { title: "User Management", url: "/admin/users", icon: Users },
-  { title: "Settings", url: "/admin/settings", icon: Settings },
-];
-
 export function AppSidebar() {
-  const { state, toggleSidebar } = useSidebar();
+  const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
   const isActive = (path: string) => location.pathname === path;
 
+  const role = localStorage.getItem("userRole") || "credit-officer";
+  const prefix = role === "manager" ? "/manager" : "/credit-officer";
+
+  const mainItems = role === "credit-officer" ? [
+    { title: "Dashboard", url: `${prefix}/dashboard`, icon: LayoutDashboard },
+    { title: "Applications", url: `${prefix}/applications`, icon: FileText },
+    { title: "Doc Verification", url: `${prefix}/document-verification`, icon: FileCheck },
+    { title: "Risk Engine", url: `${prefix}/risk-engine`, icon: Shield },
+    { title: "CAM Generator", url: `${prefix}/cam-generator`, icon: BookOpen },
+    { title: "Tracking", url: `${prefix}/tracking`, icon: GitBranch },
+  ] : [
+    { title: "Dashboard", url: `${prefix}/dashboard`, icon: LayoutDashboard },
+    { title: "Applications", url: `${prefix}/applications`, icon: FileText },
+    { title: "Risk Engine", url: `${prefix}/risk-engine`, icon: Shield },
+    { title: "Decision Center", url: `${prefix}/decision-center`, icon: Gavel },
+    { title: "Tracking", url: `${prefix}/tracking`, icon: GitBranch },
+  ];
+
+  const toolItems = [
+    { title: "AI Research", url: `${prefix}/research`, icon: Brain },
+  ];
+
+  const adminItems = role === "manager" ? [
+    { title: "User Management", url: `${prefix}/admin/users`, icon: Users },
+  ] : [];
+
   const handleLogout = () => {
+    localStorage.removeItem("userRole");
     toast({ title: "Signed Out", description: "You have been logged out successfully." });
     navigate("/login");
   };
+
+  const userName = role === "manager" ? "Amit Desai" : "Rajesh Kumar";
+  const userRole = role === "manager" ? "Senior Manager" : "Credit Officer";
+  const initials = userName.split(" ").map(n => n[0]).join("");
 
   return (
     <Sidebar collapsible="icon" className="border-r border-border/50">
@@ -96,35 +107,34 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-muted-foreground/60">Admin</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {adminItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={isActive(item.url)}>
-                    <NavLink to={item.url} end activeClassName="bg-primary/10 text-primary border-primary/20">
-                      <item.icon className="h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {adminItems.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-muted-foreground/60">Admin</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {adminItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild isActive={isActive(item.url)}>
+                      <NavLink to={item.url} end activeClassName="bg-primary/10 text-primary border-primary/20">
+                        <item.icon className="h-4 w-4" />
+                        {!collapsed && <span>{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="p-3">
-        <button onClick={toggleSidebar} className="flex items-center gap-2 w-full p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors text-sm">
-          {collapsed ? <ChevronRight className="h-4 w-4" /> : <><ChevronLeft className="h-4 w-4" /><span>Collapse</span></>}
-        </button>
         {!collapsed && (
           <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/30">
-            <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-semibold text-primary">RK</div>
+            <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-semibold text-primary">{initials}</div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-foreground truncate">Rajesh Kumar</p>
-              <p className="text-[10px] text-muted-foreground">Credit Manager</p>
+              <p className="text-xs font-medium text-foreground truncate">{userName}</p>
+              <p className="text-[10px] text-muted-foreground">{userRole}</p>
             </div>
             <button onClick={handleLogout} title="Sign Out">
               <LogOut className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground cursor-pointer transition-colors" />

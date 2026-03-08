@@ -1,11 +1,13 @@
 import { useState, useMemo } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
-import { Outlet, useNavigate } from "react-router-dom";
-import { Bell, Search, X } from "lucide-react";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
+import { Bell, Search, X, Menu, Home, FileText, Shield, BookOpen, Gavel, Brain, LogOut } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { recentApplications } from "@/lib/mock-data";
+import { useToast } from "@/hooks/use-toast";
 
 const notifications = [
   { id: 1, title: "High Risk Alert", desc: "Adani Ports & SEZ flagged — Risk Score 72", time: "5 min ago", read: false },
@@ -20,6 +22,11 @@ export function AppLayout() {
   const [searchFocused, setSearchFocused] = useState(false);
   const [notifRead, setNotifRead] = useState<number[]>(notifications.filter(n => n.read).map(n => n.id));
   const navigate = useNavigate();
+  const location = useLocation();
+  const { toast } = useToast();
+
+  const role = localStorage.getItem("userRole") || "credit-officer";
+  const prefix = role === "manager" ? "/manager" : "/credit-officer";
 
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
@@ -33,8 +40,25 @@ export function AppLayout() {
   }, [searchQuery]);
 
   const unreadCount = notifications.filter(n => !notifRead.includes(n.id)).length;
-
   const markAllRead = () => setNotifRead(notifications.map(n => n.id));
+
+  const navMenuItems = [
+    { label: "Dashboard", icon: Home, url: `${prefix}/dashboard` },
+    { label: "Applications", icon: FileText, url: `${prefix}/applications` },
+    { label: "Risk Engine", icon: Shield, url: `${prefix}/risk-engine` },
+    { label: "AI Research", icon: Brain, url: `${prefix}/research` },
+    ...(role === "credit-officer" ? [
+      { label: "CAM Generator", icon: BookOpen, url: `${prefix}/cam-generator` },
+    ] : [
+      { label: "Decision Center", icon: Gavel, url: `${prefix}/decision-center` },
+    ]),
+  ];
+
+  const handleLogout = () => {
+    localStorage.removeItem("userRole");
+    toast({ title: "Signed Out", description: "Logged out successfully." });
+    navigate("/login");
+  };
 
   return (
     <SidebarProvider>
@@ -60,7 +84,6 @@ export function AppLayout() {
                   </button>
                 )}
               </div>
-              {/* Search Results Dropdown */}
               {searchFocused && searchQuery && (
                 <div className="absolute top-full left-0 mt-1 w-72 bg-popover border border-border rounded-lg shadow-lg z-50 max-h-64 overflow-auto">
                   {searchResults.length > 0 ? (
@@ -68,7 +91,7 @@ export function AppLayout() {
                       <button
                         key={app.id}
                         className="w-full text-left px-3 py-2.5 hover:bg-muted/50 transition-colors border-b border-border/30 last:border-0"
-                        onMouseDown={() => { setSearchQuery(""); navigate("/applications"); }}
+                        onMouseDown={() => { setSearchQuery(""); navigate(`${prefix}/applications`); }}
                       >
                         <p className="text-xs font-medium text-foreground">{app.company}</p>
                         <p className="text-[10px] text-muted-foreground">{app.id} • {app.sector} • ₹{app.loanAmount} Cr</p>
@@ -90,7 +113,7 @@ export function AppLayout() {
                   <button className="relative p-2 rounded-lg hover:bg-muted/50 transition-colors">
                     <Bell className="h-4 w-4 text-muted-foreground" />
                     {unreadCount > 0 && (
-                      <span className="absolute top-1 right-1 h-4 w-4 rounded-full bg-risk-high text-[9px] font-bold text-white flex items-center justify-center animate-pulse-glow">
+                      <span className="absolute top-1 right-1 h-4 w-4 rounded-full bg-risk-high text-[9px] font-bold text-white flex items-center justify-center animate-pulse">
                         {unreadCount}
                       </span>
                     )}
@@ -121,7 +144,41 @@ export function AppLayout() {
                 </DropdownMenuContent>
               </DropdownMenu>
               <div className="h-6 w-px bg-border" />
-              <span className="text-xs text-muted-foreground">v2.1.0</span>
+
+              {/* Hamburger Menu */}
+              <Sheet>
+                <SheetTrigger asChild>
+                  <button className="p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                    <Menu className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-72">
+                  <SheetHeader>
+                    <SheetTitle className="text-sm">Navigation</SheetTitle>
+                  </SheetHeader>
+                  <div className="mt-4 space-y-1">
+                    {navMenuItems.map((item) => (
+                      <button
+                        key={item.label}
+                        onClick={() => navigate(item.url)}
+                        className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                          location.pathname === item.url ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                        }`}
+                      >
+                        <item.icon className="h-4 w-4" />
+                        {item.label}
+                      </button>
+                    ))}
+                    <div className="border-t border-border/50 my-3" />
+                    <button onClick={handleLogout} className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50">
+                      <LogOut className="h-4 w-4" />
+                      Sign Out
+                    </button>
+                  </div>
+                </SheetContent>
+              </Sheet>
+
+              <span className="text-xs text-muted-foreground hidden md:block">v2.1.0</span>
             </div>
           </header>
           <main className="flex-1 overflow-auto p-6">
