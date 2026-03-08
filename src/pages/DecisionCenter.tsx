@@ -1185,7 +1185,7 @@ function CAMSummaryCard({ app }: { app: any }) {
       .order("created_at", { ascending: false })
       .maybeSingle()
       .then(({ data }) => { setCamData(data); setLoadingCam(false); })
-      .catch(() => setLoadingCam(false));
+      .then(undefined, () => setLoadingCam(false));
   }, [app.id]);
 
   return (
