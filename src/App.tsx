@@ -15,6 +15,7 @@ import Tracking from "./pages/Tracking";
 import DocumentVerification from "./pages/DocumentVerification";
 import DecisionCenter from "./pages/DecisionCenter";
 import AIResearch from "./pages/AIResearch";
+import DocumentIntelligence from "./pages/DocumentIntelligence";
 import ManagerDashboard from "./pages/ManagerDashboard";
 import AdminSettings from "./pages/AdminSettings";
 import Index from "./pages/Index";
@@ -57,6 +58,7 @@ const App = () => (
                   <Route path="/cam-generator" element={<CamGenerator />} />
                   <Route path="/tracking" element={<Tracking />} />
                   <Route path="/research" element={<AIResearch />} />
+                  <Route path="/document-intelligence" element={<DocumentIntelligence />} />
                 </Route>
               </Route>
 
