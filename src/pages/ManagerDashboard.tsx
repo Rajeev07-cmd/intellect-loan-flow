@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { FileText, AlertTriangle, TrendingUp, IndianRupee, XCircle, Eye, Gavel, Shield, BarChart3 } from "lucide-react";
+import { FileText, AlertTriangle, TrendingUp, IndianRupee, XCircle, Eye, Gavel, Shield } from "lucide-react";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { RiskBadge } from "@/components/ui/risk-badge";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { kpiData, recentApplications, riskDistribution, sectorExposure, monthlyTrend } from "@/lib/mock-data";
+import { recentApplications, monthlyTrend } from "@/lib/mock-data";
+import { useRealtimeApplications } from "@/hooks/useRealtimeApplications";
+import { Badge } from "@/components/ui/badge";
+import { Activity } from "lucide-react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from "recharts";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useNavigate } from "react-router-dom";
@@ -56,11 +59,7 @@ function PortfolioRiskHeatmap() {
         </div>
 
         {heatmapData.map((row, ri) => (
-          <motion.div
-            key={row.sector}
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: ri * 0.04 }}
+          <motion.div key={row.sector} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: ri * 0.04 }}
             className="grid grid-cols-[140px_1fr_1fr_1fr_80px] gap-1.5 items-center"
           >
             <div className="text-xs font-medium text-foreground truncate">{row.sector}</div>
@@ -70,15 +69,9 @@ function PortfolioRiskHeatmap() {
               return (
                 <Tooltip key={level}>
                   <TooltipTrigger asChild>
-                    <motion.div
-                      whileHover={{ scale: 1.08 }}
-                      onMouseEnter={() => setHoveredCell(cellKey)}
-                      onMouseLeave={() => setHoveredCell(null)}
+                    <motion.div whileHover={{ scale: 1.08 }} onMouseEnter={() => setHoveredCell(cellKey)} onMouseLeave={() => setHoveredCell(null)}
                       className="relative h-10 rounded-md flex items-center justify-center cursor-pointer transition-shadow"
-                      style={{
-                        backgroundColor: getCellColor(level, count),
-                        boxShadow: hoveredCell === cellKey ? `0 0 12px ${getCellColor(level, count)}` : "none",
-                      }}
+                      style={{ backgroundColor: getCellColor(level, count), boxShadow: hoveredCell === cellKey ? `0 0 12px ${getCellColor(level, count)}` : "none" }}
                     >
                       <span className="text-sm font-bold" style={{ color: getCellTextColor(level, count) }}>{count}</span>
                     </motion.div>
@@ -114,15 +107,42 @@ function PortfolioRiskHeatmap() {
 
 export default function ManagerDashboard() {
   const navigate = useNavigate();
+  const { hasLiveData, kpis, riskBreakdown, sectorExposure: liveSectorExposure } = useRealtimeApplications();
 
-  const awaitingApproval = recentApplications.filter(a => a.status === "Under Review" || a.status === "Pending").length;
-  const highRisk = recentApplications.filter(a => a.riskScore > 65).length;
+  const mockAwaitingApproval = recentApplications.filter(a => a.status === "Under Review" || a.status === "Pending").length;
+  const mockHighRisk = recentApplications.filter(a => a.riskScore > 65).length;
+
+  const awaitingApproval = hasLiveData ? kpis.pendingReview + mockAwaitingApproval : mockAwaitingApproval;
+  const highRisk = hasLiveData ? kpis.highRisk + mockHighRisk : mockHighRisk;
+  const avgRiskScore = hasLiveData ? kpis.avgRiskScore : 62;
+  const approvedValue = hasLiveData ? kpis.totalExposure : 2847;
+  const rejected = hasLiveData ? kpis.rejected : 8;
+
+  const riskData = hasLiveData ? riskBreakdown : [
+    { name: "Low Risk", value: 42, fill: "hsl(var(--risk-low))" },
+    { name: "Medium Risk", value: 35, fill: "hsl(var(--risk-medium))" },
+    { name: "High Risk", value: 23, fill: "hsl(var(--risk-high))" },
+  ];
+
+  const sectorData = hasLiveData && liveSectorExposure.length > 0 ? liveSectorExposure : [
+    { name: "Steel & Metals", value: 28, fill: "hsl(var(--primary))" },
+    { name: "IT Services", value: 18, fill: "hsl(var(--risk-low))" },
+    { name: "Petrochemicals", value: 15, fill: "hsl(var(--risk-medium))" },
+    { name: "Infrastructure", value: 14, fill: "hsl(var(--chart-4))" },
+  ];
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Manager Dashboard</h1>
-        <p className="text-sm text-muted-foreground mt-1">Portfolio monitoring and decision oversight</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Manager Dashboard</h1>
+          <p className="text-sm text-muted-foreground mt-1">Portfolio monitoring and decision oversight</p>
+        </div>
+        {hasLiveData && (
+          <Badge variant="outline" className="gap-1.5 text-xs border-risk-low/30 text-risk-low animate-pulse">
+            <Activity className="h-3 w-3" /> Real-time
+          </Badge>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -133,13 +153,13 @@ export default function ManagerDashboard() {
           <KpiCard title="High Risk" value={highRisk} icon={AlertTriangle} variant="risk-high" trend={{ value: 8, positive: false }} index={1} />
         </motion.div>
         <motion.div whileHover={{ scale: 1.02 }} className="cursor-pointer">
-          <KpiCard title="Avg Risk Score" value={kpiData.avgRiskScore} icon={TrendingUp} variant="risk-medium" index={2} />
+          <KpiCard title="Avg Risk Score" value={avgRiskScore} icon={TrendingUp} variant="risk-medium" index={2} />
         </motion.div>
         <motion.div whileHover={{ scale: 1.02 }} className="cursor-pointer" onClick={() => navigate("/applications")}>
-          <KpiCard title="Approved Value" value={`₹${kpiData.approvedLoanValue} Cr`} icon={IndianRupee} variant="risk-low" trend={{ value: 15, positive: true }} index={3} />
+          <KpiCard title="Approved Value" value={`₹${approvedValue.toLocaleString()} Cr`} icon={IndianRupee} variant="risk-low" trend={{ value: 15, positive: true }} index={3} />
         </motion.div>
         <motion.div whileHover={{ scale: 1.02 }} className="cursor-pointer">
-          <KpiCard title="Rejected" value={kpiData.rejectedApplications} icon={XCircle} variant="risk-high" index={4} />
+          <KpiCard title="Rejected" value={rejected} icon={XCircle} variant="risk-high" index={4} />
         </motion.div>
       </div>
 
@@ -163,8 +183,8 @@ export default function ManagerDashboard() {
           <h3 className="text-sm font-semibold text-foreground mb-4">Risk Distribution</h3>
           <ResponsiveContainer width="100%" height={240}>
             <PieChart>
-              <Pie data={riskDistribution} innerRadius={55} outerRadius={80} paddingAngle={4} dataKey="value">
-                {riskDistribution.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
+              <Pie data={riskData} innerRadius={55} outerRadius={80} paddingAngle={4} dataKey="value">
+                {riskData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
               </Pie>
               <RechartsTooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--popover-foreground))", fontSize: 12 }} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
@@ -176,13 +196,13 @@ export default function ManagerDashboard() {
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="glass-card p-5">
         <h3 className="text-sm font-semibold text-foreground mb-4">Sector Exposure</h3>
         <ResponsiveContainer width="100%" height={200}>
-          <BarChart data={sectorExposure} layout="vertical">
+          <BarChart data={sectorData} layout="vertical">
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
             <XAxis type="number" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} axisLine={false} tickLine={false} />
             <YAxis dataKey="name" type="category" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} axisLine={false} tickLine={false} width={110} />
             <RechartsTooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--popover-foreground))", fontSize: 12 }} />
             <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-              {sectorExposure.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
+              {sectorData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
