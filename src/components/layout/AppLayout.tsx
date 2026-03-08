@@ -82,7 +82,7 @@ export function AppLayout() {
   const { toast } = useToast();
   const { selectedApplication, setSelectedApplication } = useApplicationStore();
 
-  // Fetch DB applications for the selector
+  // Fetch DB applications and notifications
   useEffect(() => {
     const fetchApps = async () => {
       setLoadingApps(true);
@@ -100,7 +100,19 @@ export function AppLayout() {
         setLoadingApps(false);
       }
     };
+    const fetchNotifs = async () => {
+      try {
+        const dbNotifs = await getNotifications();
+        if (dbNotifs.length > 0) {
+          setNotifs(dbNotifs);
+        }
+      } catch { /* keep mock */ }
+    };
     fetchApps();
+    fetchNotifs();
+
+    const sub = subscribeToNotifications((updated) => setNotifs(updated));
+    return () => { sub.unsubscribe(); };
   }, []);
 
   const allSelectorApps = useMemo(() => {
