@@ -248,6 +248,12 @@ export default function DocumentVerification() {
             : d
         ));
 
+        // Log audit event
+        const isUUID = /^[0-9a-f]{8}-/i.test(selectedApplication!.id);
+        if (isUUID) {
+          await logAuditEvent("Document Uploaded", `${file.name} uploaded`, selectedApplication!.id, "Credit Officer");
+        }
+
         toast({ 
           title: "Upload Complete", 
           description: `${file.name} uploaded successfully` 
