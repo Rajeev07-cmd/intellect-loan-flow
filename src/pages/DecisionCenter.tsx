@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Building2, IndianRupee, Factory, Shield, Brain, ChevronRight,
@@ -57,8 +58,36 @@ export default function DecisionCenter() {
 
 // ─── Credit Officer Decision Center ──────────────────────────────
 function CreditOfficerDecisionCenter() {
-  const { selectedApplication } = useApplicationStore();
+  const { selectedApplication, setSelectedApplication } = useApplicationStore();
   const [decisionState, setDecisionState] = useState<DecisionState>({ credit_officer_decision: null, manager_decision: null, final_status: null });
+  const [viewMode, setViewMode] = useState<"table" | "detail">(selectedApplication ? "detail" : "table");
+  const [coApps, setCoApps] = useState<any[]>([]);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (selectedApplication) setViewMode("detail");
+  }, [selectedApplication]);
+
+  // Fetch all applications with CAM status for CO table
+  useEffect(() => {
+    const fetchApps = async () => {
+      const { data: apps } = await supabase
+        .from("applications")
+        .select("id, company_name, sector, loan_amount, risk_score, status, credit_officer_decision, recommendation")
+        .order("updated_at", { ascending: false });
+      if (!apps) { setCoApps([]); return; }
+      // Check CAM status for each
+      const { data: cams } = await supabase.from("cam_reports").select("application_id");
+      const camAppIds = new Set((cams || []).map(c => c.application_id));
+      setCoApps(apps.map(a => ({ ...a, has_cam: camAppIds.has(a.id) })));
+    };
+    fetchApps();
+    const channel = supabase
+      .channel("co_decision_apps")
+      .on("postgres_changes", { event: "*", schema: "public", table: "applications" }, () => fetchApps())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   useEffect(() => {
     if (!selectedApplication) return;
@@ -66,6 +95,22 @@ function CreditOfficerDecisionCenter() {
     if (!isUUID) return;
     getDecisionState(selectedApplication.id).then(setDecisionState);
   }, [selectedApplication]);
+
+  if (viewMode === "table" && !selectedApplication) {
+    return <CreditOfficerAppTable applications={coApps} onSelectApp={(app) => {
+      const mapped = {
+        id: app.id, company: app.company_name, cin: "", sector: app.sector,
+        loanAmount: Number(app.loan_amount), riskScore: app.risk_score ?? 50,
+        riskCategory: (app.risk_score ?? 50) <= 40 ? "Low" as const : (app.risk_score ?? 50) <= 65 ? "Medium" as const : "High" as const,
+        status: app.status, defaultProbability: 0, recommendation: app.recommendation || "Under Review",
+        financials: { revenue: "—", outstandingDebt: "—", dscr: 0, debtEquity: 0, relatedPartyTransactions: "—", gstMismatch: false, gstMismatchAmount: "—", interestCoverage: 0, currentRatio: 0 },
+        fiveCsScores: [], documents: [], validations: [], integrityScore: 0,
+        researchFindings: [], explainableAI: [], pipeline: [], comments: [],
+      };
+      setSelectedApplication(mapped);
+      setViewMode("detail");
+    }} />;
+  }
 
   if (!selectedApplication) return <NoApplicationSelected />;
   const app = selectedApplication;
@@ -79,6 +124,9 @@ function CreditOfficerDecisionCenter() {
             <h1 className="text-2xl font-bold text-foreground tracking-tight">Credit Officer — Decision Center</h1>
             <p className="text-sm text-muted-foreground mt-1">{app.company} — Submit your recommendation</p>
           </div>
+          <Button variant="outline" size="sm" className="gap-2 text-xs" onClick={() => { setViewMode("table"); }}>
+            <ArrowLeft className="h-3.5 w-3.5" /> Back to Queue
+          </Button>
         </div>
       </motion.div>
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
@@ -93,6 +141,122 @@ function CreditOfficerDecisionCenter() {
           <CreditOfficerDecisionPanel />
         </motion.div>
       </div>
+    </div>
+  );
+}
+
+// ─── Credit Officer Application Table ────────────────────────────
+function CreditOfficerAppTable({ applications, onSelectApp }: { applications: any[]; onSelectApp: (app: any) => void }) {
+  const navigate = useNavigate();
+  const coDecisionLabel = (d: string | null) => d === "approve" ? "Approve" : d === "conditional" ? "Conditional" : d === "reject" ? "Reject" : "Pending";
+  const coDecisionColor = (d: string | null) =>
+    d === "approve" ? "border-risk-low/30 text-risk-low bg-risk-low/10" :
+    d === "conditional" ? "border-risk-medium/30 text-risk-medium bg-risk-medium/10" :
+    d === "reject" ? "border-risk-high/30 text-risk-high bg-risk-high/10" :
+    "border-border text-muted-foreground";
+
+  return (
+    <div className="space-y-6">
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground tracking-tight flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Shield className="h-5 w-5 text-primary" />
+              </div>
+              Credit Officer — Decision Center
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1 ml-[52px]">Review applications, generate CAM, and submit recommendations</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Badge variant="outline" className="gap-1.5 px-3 py-1.5 text-xs border-primary/30 text-primary bg-primary/10">
+              <Activity className="h-3 w-3" /> {applications.length} Applications
+            </Badge>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* KPI Strip */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          { label: "Total", value: applications.length, icon: FileCheck, color: "text-primary" },
+          { label: "CAM Generated", value: applications.filter(a => a.has_cam).length, icon: FileCheck, color: "text-risk-low" },
+          { label: "Decision Pending", value: applications.filter(a => !a.credit_officer_decision).length, icon: Clock, color: "text-risk-medium" },
+          { label: "Sent to Manager", value: applications.filter(a => a.status === "Manager Review").length, icon: Send, color: "text-chart-4" },
+        ].map((kpi, i) => (
+          <Card key={i} className="border-border/50">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className={`h-9 w-9 rounded-lg bg-muted/30 flex items-center justify-center ${kpi.color}`}>
+                <kpi.icon className="h-4.5 w-4.5" />
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{kpi.label}</p>
+                <p className="text-xl font-bold text-foreground">{kpi.value}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </motion.div>
+
+      {applications.length === 0 ? (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-12 text-center">
+          <FileCheck className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-foreground mb-2">No applications yet</h3>
+          <p className="text-sm text-muted-foreground mb-4">Create a new application to start the credit appraisal workflow.</p>
+          <Button onClick={() => navigate("/applications")} className="gap-2">
+            <FileCheck className="h-4 w-4" /> Create Application
+          </Button>
+        </motion.div>
+      ) : (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass-card overflow-hidden">
+          <div className="p-4 border-b border-border/50 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-foreground">Application Pipeline</h3>
+            <p className="text-[10px] text-muted-foreground">Click Review to open decision workspace</p>
+          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-[10px] uppercase tracking-wider font-semibold">Company</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-wider font-semibold">Sector</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-wider font-semibold">Loan Amount</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-wider font-semibold">Risk Score</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-wider font-semibold">CAM Status</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-wider font-semibold">Recommendation</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-wider font-semibold">Status</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-wider font-semibold text-right">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {applications.map((app) => (
+                <TableRow key={app.id} className="hover:bg-muted/30 transition-colors">
+                  <TableCell>
+                    <p className="font-semibold text-foreground text-sm">{app.company_name}</p>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm">{app.sector}</TableCell>
+                  <TableCell className="text-foreground font-medium text-sm">₹{Number(app.loan_amount).toLocaleString()} Cr</TableCell>
+                  <TableCell><RiskBadge score={app.risk_score ?? 50} label={`${app.risk_score ?? 50}`} size="md" /></TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={`text-[10px] ${app.has_cam ? "border-risk-low/30 text-risk-low bg-risk-low/10" : "border-border text-muted-foreground"}`}>
+                      {app.has_cam ? "✓ Generated" : "Pending"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={`text-[10px] ${coDecisionColor(app.credit_officer_decision)}`}>
+                      {coDecisionLabel(app.credit_officer_decision)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell><StatusBadge status={app.status} /></TableCell>
+                  <TableCell className="text-right">
+                    <Button size="sm" className="gap-1.5 text-xs h-8" onClick={() => onSelectApp(app)}>
+                      <Eye className="h-3.5 w-3.5" /> Review
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </motion.div>
+      )}
     </div>
   );
 }
@@ -1007,56 +1171,128 @@ function ApplicationSummaryCard({ app }: { app: any }) {
 }
 
 function CAMSummaryCard({ app }: { app: any }) {
+  const [camData, setCamData] = useState<any>(null);
+  const [loadingCam, setLoadingCam] = useState(false);
+
+  useEffect(() => {
+    const isUUID = /^[0-9a-f]{8}-/i.test(app.id);
+    if (!isUUID) return;
+    setLoadingCam(true);
+    supabase
+      .from("cam_reports")
+      .select("*")
+      .eq("application_id", app.id)
+      .order("created_at", { ascending: false })
+      .maybeSingle()
+      .then(({ data }) => { setCamData(data); setLoadingCam(false); })
+      .then(undefined, () => setLoadingCam(false));
+  }, [app.id]);
+
   return (
     <Card className="border-border/50">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm font-semibold">CAM Summary</CardTitle>
-        <CardDescription className="text-xs">Credit Appraisal Memo highlights</CardDescription>
+        <CardDescription className="text-xs">
+          {camData ? "From saved Credit Appraisal Memo" : "Credit Appraisal Memo highlights"}
+        </CardDescription>
       </CardHeader>
       <CardContent>
-        <Accordion type="multiple" defaultValue={["financials", "fivec"]}>
-          <AccordionItem value="financials">
-            <AccordionTrigger className="text-xs font-semibold py-2">Financial Highlights</AccordionTrigger>
-            <AccordionContent>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  ["Revenue", app.financials?.revenue || "—"],
-                  ["Outstanding Debt", app.financials?.outstandingDebt || "—"],
-                  ["DSCR", app.financials?.dscr ? `${app.financials.dscr}x` : "—"],
-                  ["Debt/Equity", app.financials?.debtEquity ? `${app.financials.debtEquity}x` : "—"],
-                  ["Interest Coverage", app.financials?.interestCoverage ? `${app.financials.interestCoverage}x` : "—"],
-                  ["Current Ratio", app.financials?.currentRatio ? `${app.financials.currentRatio}x` : "—"],
-                ].map(([label, value], i) => (
-                  <div key={i} className="p-2.5 rounded-lg bg-muted/30 border border-border/50">
-                    <p className="text-[10px] text-muted-foreground">{label}</p>
-                    <p className="text-sm font-bold text-foreground">{value}</p>
-                  </div>
-                ))}
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-          <AccordionItem value="fivec">
-            <AccordionTrigger className="text-xs font-semibold py-2">Five Cs Evaluation</AccordionTrigger>
-            <AccordionContent>
-              <div className="space-y-2">
-                {(app.fiveCsScores || []).map((c: any) => (
-                  <div key={c.name} className="flex items-center justify-between p-2 bg-muted/20 rounded-lg">
-                    <span className="text-xs font-medium text-foreground">{c.name}</span>
-                    <div className="flex items-center gap-3">
-                      <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden">
-                        <div className={`h-full rounded-full ${c.score >= 70 ? "bg-risk-low" : c.score >= 50 ? "bg-risk-medium" : "bg-risk-high"}`} style={{ width: `${c.score}%` }} />
-                      </div>
-                      <span className="text-xs font-bold text-foreground w-6 text-right">{c.score}</span>
+        {loadingCam ? (
+          <div className="flex items-center justify-center py-6">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : camData ? (
+          <Accordion type="multiple" defaultValue={["overview", "financials", "risk", "recommendation"]}>
+            {camData.company_overview && (
+              <AccordionItem value="overview">
+                <AccordionTrigger className="text-xs font-semibold py-2">Company Overview</AccordionTrigger>
+                <AccordionContent>
+                  <p className="text-xs text-muted-foreground whitespace-pre-line">{camData.company_overview}</p>
+                </AccordionContent>
+              </AccordionItem>
+            )}
+            {camData.financial_analysis && (
+              <AccordionItem value="financials">
+                <AccordionTrigger className="text-xs font-semibold py-2">Financial Analysis</AccordionTrigger>
+                <AccordionContent>
+                  <p className="text-xs text-muted-foreground whitespace-pre-line">{camData.financial_analysis}</p>
+                </AccordionContent>
+              </AccordionItem>
+            )}
+            {camData.risk_analysis && (
+              <AccordionItem value="risk">
+                <AccordionTrigger className="text-xs font-semibold py-2">Risk Analysis</AccordionTrigger>
+                <AccordionContent>
+                  <p className="text-xs text-muted-foreground whitespace-pre-line">{camData.risk_analysis}</p>
+                </AccordionContent>
+              </AccordionItem>
+            )}
+            <AccordionItem value="recommendation">
+              <AccordionTrigger className="text-xs font-semibold py-2">Loan Recommendation</AccordionTrigger>
+              <AccordionContent>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    ["Recommendation", camData.recommendation || "—"],
+                    ["Suggested Limit", camData.suggested_loan_limit || "—"],
+                    ["Interest Rate", camData.interest_rate || "—"],
+                  ].map(([label, value], i) => (
+                    <div key={i} className="p-2.5 rounded-lg bg-muted/30 border border-border/50">
+                      <p className="text-[10px] text-muted-foreground">{label}</p>
+                      <p className="text-sm font-bold text-foreground">{value}</p>
                     </div>
-                  </div>
-                ))}
-                {(!app.fiveCsScores || app.fiveCsScores.length === 0) && (
-                  <p className="text-xs text-muted-foreground text-center py-3">No evaluation data</p>
-                )}
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
+                  ))}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        ) : (
+          <Accordion type="multiple" defaultValue={["financials", "fivec"]}>
+            <AccordionItem value="financials">
+              <AccordionTrigger className="text-xs font-semibold py-2">Financial Highlights</AccordionTrigger>
+              <AccordionContent>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    ["Revenue", app.financials?.revenue || "—"],
+                    ["Outstanding Debt", app.financials?.outstandingDebt || "—"],
+                    ["DSCR", app.financials?.dscr ? `${app.financials.dscr}x` : "—"],
+                    ["Debt/Equity", app.financials?.debtEquity ? `${app.financials.debtEquity}x` : "—"],
+                    ["Interest Coverage", app.financials?.interestCoverage ? `${app.financials.interestCoverage}x` : "—"],
+                    ["Current Ratio", app.financials?.currentRatio ? `${app.financials.currentRatio}x` : "—"],
+                  ].map(([label, value], i) => (
+                    <div key={i} className="p-2.5 rounded-lg bg-muted/30 border border-border/50">
+                      <p className="text-[10px] text-muted-foreground">{label}</p>
+                      <p className="text-sm font-bold text-foreground">{value}</p>
+                    </div>
+                  ))}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="fivec">
+              <AccordionTrigger className="text-xs font-semibold py-2">Five Cs Evaluation</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-2">
+                  {(app.fiveCsScores || []).map((c: any) => (
+                    <div key={c.name} className="flex items-center justify-between p-2 bg-muted/20 rounded-lg">
+                      <span className="text-xs font-medium text-foreground">{c.name}</span>
+                      <div className="flex items-center gap-3">
+                        <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full ${c.score >= 70 ? "bg-risk-low" : c.score >= 50 ? "bg-risk-medium" : "bg-risk-high"}`} style={{ width: `${c.score}%` }} />
+                        </div>
+                        <span className="text-xs font-bold text-foreground w-6 text-right">{c.score}</span>
+                      </div>
+                    </div>
+                  ))}
+                  {(!app.fiveCsScores || app.fiveCsScores.length === 0) && (
+                    <p className="text-xs text-muted-foreground text-center py-3">No evaluation data</p>
+                  )}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+            <div className="mt-3 p-3 rounded-lg bg-risk-medium/10 border border-risk-medium/20 text-center">
+              <p className="text-[10px] text-risk-medium font-medium">⚠ No CAM report saved yet. Generate one from the CAM Generator page.</p>
+            </div>
+          </Accordion>
+        )}
       </CardContent>
     </Card>
   );
