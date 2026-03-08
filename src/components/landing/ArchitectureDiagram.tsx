@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import {
   FileText, BarChart3, Building2, Receipt, Globe, Scale,
   Brain, FileCheck, Search, Shield, Sparkles, BookOpen,
-  LayoutDashboard, Gavel, TrendingUp, CheckCircle2, PieChart,
+  LayoutDashboard, Gavel, TrendingUp, PieChart,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 
@@ -16,8 +16,8 @@ const dataSources: DataCard[] = [
   { icon: BarChart3, label: "Financial Statements" },
   { icon: Building2, label: "Bank Statements" },
   { icon: Receipt, label: "GST Filings" },
-  { icon: Globe, label: "External Research" },
   { icon: Scale, label: "Regulatory Filings" },
+  { icon: Globe, label: "News & Litigation Data" },
 ];
 
 const aiModules: DataCard[] = [
@@ -31,10 +31,9 @@ const aiModules: DataCard[] = [
 
 const outputs: DataCard[] = [
   { icon: LayoutDashboard, label: "Credit Officer Dashboard" },
-  { icon: Gavel, label: "Manager Decision Center" },
-  { icon: TrendingUp, label: "Risk Analytics Dashboard" },
-  { icon: CheckCircle2, label: "Loan Approval Engine" },
-  { icon: PieChart, label: "Portfolio Monitoring" },
+  { icon: Gavel, label: "Manager Approval System" },
+  { icon: TrendingUp, label: "Risk Monitoring Dashboard" },
+  { icon: PieChart, label: "Portfolio Analytics" },
 ];
 
 const workflowSteps = [
@@ -42,69 +41,168 @@ const workflowSteps = [
   "AI Extracts Financial Data",
   "Document Verification",
   "Research Intelligence Analysis",
-  "Risk Scoring Model",
+  "Credit Risk Scoring Model",
   "Explainable AI Insights",
   "CAM Generation",
-  "Manager Loan Decision",
+  "Manager Loan Approval",
 ];
 
+/* ── Animated flowing dots along an SVG path ── */
+function FlowingDots({ direction = "right" }: { direction?: "right" | "left" }) {
+  return (
+    <div className="hidden lg:flex items-center justify-center w-20 relative">
+      <svg width="80" height="40" viewBox="0 0 80 40" className="overflow-visible">
+        <motion.line
+          x1="0" y1="20" x2="70" y2="20"
+          stroke="hsl(var(--primary) / 0.25)"
+          strokeWidth="2"
+          strokeDasharray="6 4"
+          animate={{ strokeDashoffset: direction === "right" ? [0, -20] : [0, 20] }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+        />
+        <polygon
+          points={direction === "right" ? "68,14 68,26 80,20" : "12,14 12,26 0,20"}
+          fill="hsl(var(--primary) / 0.4)"
+        />
+      </svg>
+      {/* Flowing particle dots */}
+      {[0, 1, 2].map((i) => (
+        <motion.div
+          key={i}
+          className="absolute w-2 h-2 rounded-full bg-primary/70 shadow-[0_0_8px_hsl(var(--primary)/0.6)]"
+          style={{ top: "50%", translateY: "-50%" }}
+          animate={{
+            x: direction === "right" ? [-10, 80] : [80, -10],
+            opacity: [0, 1, 1, 0],
+          }}
+          transition={{
+            duration: 1.8,
+            repeat: Infinity,
+            delay: i * 0.6,
+            ease: "linear",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/* ── Mobile vertical arrow ── */
+function MobileFlowArrow() {
+  return (
+    <div className="flex lg:hidden items-center justify-center py-3">
+      <svg width="24" height="40" viewBox="0 0 24 40">
+        <motion.line
+          x1="12" y1="0" x2="12" y2="30"
+          stroke="hsl(var(--primary) / 0.3)"
+          strokeWidth="2"
+          strokeDasharray="5 4"
+          animate={{ strokeDashoffset: [0, -18] }}
+          transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
+        />
+        <polygon points="6,28 12,40 18,28" fill="hsl(var(--primary) / 0.4)" />
+      </svg>
+    </div>
+  );
+}
+
+/* ── Source / Output card ── */
 function ColumnCard({ card, index, side }: { card: DataCard; index: number; side: "left" | "right" }) {
   const Icon = card.icon;
   return (
     <motion.div
-      initial={{ opacity: 0, x: side === "left" ? -30 : 30 }}
+      initial={{ opacity: 0, x: side === "left" ? -40 : 40 }}
       whileInView={{ opacity: 1, x: 0 }}
       viewport={{ once: true }}
-      transition={{ delay: index * 0.08 }}
-      whileHover={{ scale: 1.04, y: -2 }}
-      className="glass-card-hover p-3 flex items-center gap-3 cursor-default"
+      transition={{ delay: index * 0.1, type: "spring", stiffness: 120 }}
+      whileHover={{ scale: 1.05, y: -3 }}
+      className="glass-card-hover p-3.5 flex items-center gap-3 cursor-default group"
     >
-      <div className="p-2 rounded-lg bg-primary/10 shrink-0">
+      <motion.div
+        animate={{ y: [0, -3, 0] }}
+        transition={{ duration: 3, repeat: Infinity, delay: index * 0.3, ease: "easeInOut" }}
+        className="p-2 rounded-lg bg-primary/10 border border-primary/20 shrink-0 group-hover:shadow-[0_0_12px_hsl(var(--primary)/0.3)] transition-shadow"
+      >
         <Icon className="h-4 w-4 text-primary" />
-      </div>
+      </motion.div>
       <span className="text-xs font-medium text-foreground">{card.label}</span>
     </motion.div>
   );
 }
 
-function FlowArrow({ direction }: { direction: "down" | "right" | "left" }) {
+/* ── AI Core ── */
+function AICore() {
   return (
-    <div className="flex items-center justify-center py-2 lg:py-0 lg:px-2">
-      <svg
-        className={`text-primary/40 ${direction === "down" ? "w-6 h-10" : "w-10 h-6 hidden lg:block"}`}
-        viewBox={direction === "down" ? "0 0 24 40" : "0 0 40 24"}
-      >
-        {direction === "down" ? (
-          <>
-            <motion.line
-              x1="12" y1="0" x2="12" y2="32"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeDasharray="4 4"
-              animate={{ strokeDashoffset: [0, -16] }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-            />
-            <polygon points="6,30 12,40 18,30" fill="currentColor" />
-          </>
-        ) : (
-          <>
-            <motion.line
-              x1="0" y1="12" x2="32" y2="12"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeDasharray="4 4"
-              animate={{ strokeDashoffset: direction === "left" ? [0, 16] : [0, -16] }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-            />
-            <polygon
-              points={direction === "left" ? "0,6 0,18 -6,12" : "30,6 30,18 40,12"}
-              fill="currentColor"
-              transform={direction === "left" ? "translate(2,0)" : ""}
-            />
-          </>
-        )}
-      </svg>
-    </div>
+    <motion.div
+      initial={{ opacity: 0, scale: 0.7 }}
+      whileInView={{ opacity: 1, scale: 1 }}
+      viewport={{ once: true }}
+      transition={{ type: "spring", stiffness: 80 }}
+      className="relative flex items-center justify-center"
+    >
+      {/* Outer pulsing rings */}
+      <motion.div
+        className="absolute w-[340px] h-[340px] rounded-full border border-primary/10"
+        animate={{ scale: [1, 1.08, 1], opacity: [0.1, 0.3, 0.1] }}
+        transition={{ duration: 4, repeat: Infinity }}
+      />
+      <motion.div
+        className="absolute w-[300px] h-[300px] rounded-full border-2 border-primary/20"
+        animate={{ scale: [1, 1.04, 1], opacity: [0.2, 0.5, 0.2] }}
+        transition={{ duration: 3, repeat: Infinity, delay: 0.5 }}
+      />
+
+      {/* Rotating ring */}
+      <motion.div
+        className="absolute w-[280px] h-[280px] rounded-full"
+        animate={{ rotate: 360 }}
+        transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+        style={{
+          background: "conic-gradient(from 0deg, transparent 0%, hsl(var(--primary) / 0.2) 15%, transparent 30%, hsl(var(--chart-4) / 0.15) 50%, transparent 65%, hsl(var(--primary) / 0.15) 80%, transparent 100%)",
+        }}
+      />
+
+      {/* Core circle */}
+      <div className="relative w-60 h-60 md:w-64 md:h-64 rounded-full bg-gradient-to-br from-primary/15 via-card to-chart-4/10 border border-primary/30 flex flex-col items-center justify-center p-5 shadow-[0_0_60px_-15px_hsl(var(--primary)/0.3)]">
+        <motion.div
+          animate={{ scale: [1, 1.15, 1] }}
+          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+        >
+          <Brain className="h-8 w-8 text-primary mb-1" />
+        </motion.div>
+        <span className="text-sm font-bold text-foreground text-center leading-tight">
+          Intelli-Credit
+          <br />
+          AI Engine
+        </span>
+        <div className="mt-2.5 space-y-0.5">
+          {aiModules.map((m) => (
+            <p key={m.label} className="text-[9px] text-muted-foreground text-center">{m.label}</p>
+          ))}
+        </div>
+      </div>
+
+      {/* Incoming particles (left side) */}
+      {[0, 1, 2, 3, 4, 5].map((i) => (
+        <motion.div
+          key={`l-${i}`}
+          className="absolute w-1.5 h-1.5 rounded-full bg-primary/70 shadow-[0_0_6px_hsl(var(--primary)/0.5)]"
+          style={{ left: "-15%", top: `${18 + i * 12}%` }}
+          animate={{ x: [0, 100, 140], opacity: [0, 1, 0] }}
+          transition={{ duration: 2.2, repeat: Infinity, delay: i * 0.35, ease: "easeInOut" }}
+        />
+      ))}
+      {/* Outgoing particles (right side) */}
+      {[0, 1, 2, 3, 4].map((i) => (
+        <motion.div
+          key={`r-${i}`}
+          className="absolute w-1.5 h-1.5 rounded-full bg-chart-4/70 shadow-[0_0_6px_hsl(var(--chart-4)/0.5)]"
+          style={{ right: "-15%", top: `${22 + i * 14}%` }}
+          animate={{ x: [0, -100, -140], opacity: [0, 1, 0] }}
+          transition={{ duration: 2.2, repeat: Infinity, delay: i * 0.45, ease: "easeInOut" }}
+        />
+      ))}
+    </motion.div>
   );
 }
 
@@ -112,21 +210,24 @@ export function ArchitectureDiagram() {
   return (
     <section id="architecture" className="py-24 px-6 overflow-hidden">
       <div className="max-w-7xl mx-auto">
+        {/* Section header */}
         <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           className="text-center mb-16"
         >
           <span className="text-xs font-semibold text-primary uppercase tracking-widest">System Architecture</span>
-          <h2 className="text-3xl md:text-4xl font-bold mt-3">How Intelli-Credit Works</h2>
+          <h2 className="text-3xl md:text-4xl font-bold mt-3">
+            <span className="text-gradient">AI-Powered</span> Corporate Credit Decisioning
+          </h2>
           <p className="text-muted-foreground mt-3 max-w-2xl mx-auto">
-            End-to-end AI pipeline from corporate data ingestion to final credit decision.
+            Automating corporate loan risk assessment, document verification, and credit appraisal memo generation using explainable AI.
           </p>
         </motion.div>
 
-        {/* Architecture 3-column layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto_1.2fr_auto_1fr] gap-6 items-center">
+        {/* ── 3-Column Architecture ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto_1.3fr_auto_1fr] gap-6 items-center">
           {/* Left: Data Sources */}
           <div>
             <motion.h3
@@ -135,7 +236,7 @@ export function ArchitectureDiagram() {
               viewport={{ once: true }}
               className="text-sm font-semibold text-primary mb-4 text-center"
             >
-              Corporate Data Sources
+              Corporate Data Inputs
             </motion.h3>
             <div className="space-y-2.5">
               {dataSources.map((card, i) => (
@@ -145,101 +246,19 @@ export function ArchitectureDiagram() {
           </div>
 
           {/* Arrow left → center */}
-          <FlowArrow direction="right" />
-          <div className="lg:hidden"><FlowArrow direction="down" /></div>
+          <FlowingDots direction="right" />
+          <MobileFlowArrow />
 
           {/* Center: AI Core */}
-          <div className="flex flex-col items-center">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              className="relative"
-            >
-              {/* Outer glow ring */}
-              <motion.div
-                className="absolute -inset-4 rounded-full border-2 border-primary/20"
-                animate={{ scale: [1, 1.05, 1], opacity: [0.3, 0.6, 0.3] }}
-                transition={{ duration: 3, repeat: Infinity }}
-              />
-              <motion.div
-                className="absolute -inset-8 rounded-full border border-primary/10"
-                animate={{ scale: [1, 1.08, 1], opacity: [0.15, 0.35, 0.15] }}
-                transition={{ duration: 4, repeat: Infinity, delay: 0.5 }}
-              />
-
-              {/* Core circle */}
-              <div className="relative w-64 h-64 md:w-72 md:h-72 rounded-full bg-gradient-to-br from-primary/15 via-card to-chart-4/10 border border-primary/30 flex flex-col items-center justify-center p-6 shadow-2xl shadow-primary/10">
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                  className="absolute inset-0 rounded-full"
-                  style={{
-                    background: "conic-gradient(from 0deg, transparent 0%, hsl(var(--primary) / 0.15) 25%, transparent 50%, hsl(var(--chart-4) / 0.1) 75%, transparent 100%)",
-                  }}
-                />
-                <Brain className="h-8 w-8 text-primary mb-2 relative z-10" />
-                <span className="text-sm font-bold text-foreground text-center relative z-10">
-                  Intelli-Credit
-                  <br />
-                  AI Engine
-                </span>
-                <div className="mt-3 space-y-1 relative z-10">
-                  {aiModules.map((m) => (
-                    <p key={m.label} className="text-[9px] text-muted-foreground text-center">{m.label}</p>
-                  ))}
-                </div>
-              </div>
-
-              {/* Animated particles flowing into core */}
-              {[0, 1, 2, 3, 4, 5].map((i) => (
-                <motion.div
-                  key={i}
-                  className="absolute w-1.5 h-1.5 rounded-full bg-primary/60"
-                  style={{
-                    left: `${-20 + Math.random() * 10}%`,
-                    top: `${20 + i * 12}%`,
-                  }}
-                  animate={{
-                    x: [0, 80, 130],
-                    opacity: [0, 1, 0],
-                  }}
-                  transition={{
-                    duration: 2.5,
-                    repeat: Infinity,
-                    delay: i * 0.4,
-                    ease: "easeInOut",
-                  }}
-                />
-              ))}
-              {[0, 1, 2, 3, 4].map((i) => (
-                <motion.div
-                  key={`r-${i}`}
-                  className="absolute w-1.5 h-1.5 rounded-full bg-chart-4/60"
-                  style={{
-                    right: `${-20 + Math.random() * 10}%`,
-                    top: `${25 + i * 12}%`,
-                  }}
-                  animate={{
-                    x: [0, -80, -130],
-                    opacity: [0, 1, 0],
-                  }}
-                  transition={{
-                    duration: 2.5,
-                    repeat: Infinity,
-                    delay: i * 0.5,
-                    ease: "easeInOut",
-                  }}
-                />
-              ))}
-            </motion.div>
+          <div className="flex justify-center">
+            <AICore />
           </div>
 
           {/* Arrow center → right */}
-          <FlowArrow direction="right" />
-          <div className="lg:hidden"><FlowArrow direction="down" /></div>
+          <FlowingDots direction="right" />
+          <MobileFlowArrow />
 
-          {/* Right: Decision Intelligence */}
+          {/* Right: Decision System */}
           <div>
             <motion.h3
               initial={{ opacity: 0 }}
@@ -247,7 +266,7 @@ export function ArchitectureDiagram() {
               viewport={{ once: true }}
               className="text-sm font-semibold text-primary mb-4 text-center"
             >
-              Credit Decision System
+              Credit Decision Platform
             </motion.h3>
             <div className="space-y-2.5">
               {outputs.map((card, i) => (
@@ -257,7 +276,7 @@ export function ArchitectureDiagram() {
           </div>
         </div>
 
-        {/* Workflow Steps */}
+        {/* ── Workflow Steps ── */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -275,7 +294,7 @@ export function ArchitectureDiagram() {
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.08 }}
-                whileHover={{ scale: 1.06 }}
+                whileHover={{ scale: 1.06, y: -2 }}
                 className="flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-card border border-border/60 shadow-sm cursor-default"
               >
                 <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">
