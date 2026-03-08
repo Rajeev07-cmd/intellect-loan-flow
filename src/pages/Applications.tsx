@@ -8,7 +8,6 @@ import { RiskBadge } from "@/components/ui/risk-badge";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { companyApplications } from "@/lib/company-data";
 import { useApplicationStore, type CompanyApplication } from "@/store/useApplicationStore";
-import { useApplicationStore } from "@/store/useApplicationStore";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
