@@ -135,7 +135,7 @@ function ManagerReviewQueue({
   applications,
   onSwitchToReview,
 }: {
-  applications: { id: string; company_name: string; sector: string; loan_amount: number; risk_score: number | null; status: string; credit_officer_decision: string | null }[];
+  applications: { id: string; company_name: string; sector: string; loan_amount: number; risk_score: number | null; status: string }[];
   onSwitchToReview: () => void;
 }) {
   const { setSelectedApplication } = useApplicationStore();
