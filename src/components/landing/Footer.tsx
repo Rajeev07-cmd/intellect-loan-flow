@@ -79,7 +79,10 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-border/50 mt-10 pt-8 text-center">
+        <div className="border-t border-border/50 mt-10 pt-8 text-center space-y-2">
+          <p className="text-sm text-muted-foreground">
+            Built with ❤️ by the Intelli-Credit Development Team
+          </p>
           <p className="text-xs text-muted-foreground">
             © 2026 Intelli-Credit Platform. AI Powered Credit Intelligence. All rights reserved.
           </p>
