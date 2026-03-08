@@ -31,7 +31,7 @@ export async function getWorkflowStatus(applicationId: string): Promise<Workflow
   // Try to get from workflow_status table
   const { data: workflowData } = await supabase
     .from("workflow_status")
-    .select("*")
+    .select("current_stage, stage_history, updated_at")
     .eq("application_id", applicationId)
     .maybeSingle();
 
@@ -39,15 +39,15 @@ export async function getWorkflowStatus(applicationId: string): Promise<Workflow
   const { data: appData } = await supabase
     .from("applications")
     .select("status, created_at, updated_at")
-    .eq("application_id", applicationId)
+    .eq("id", applicationId)
     .maybeSingle();
 
-  const currentStage = workflowData?.current_stage || appData?.status || "Application Created";
-  const stageHistory = (workflowData?.stage_history as any[]) || [];
-  const currentStageIndex = WORKFLOW_STAGES.indexOf(currentStage as WorkflowStage);
+  const currentStage = (workflowData?.current_stage || appData?.status || "Application Created") as WorkflowStage;
+  const stageHistory = (workflowData?.stage_history as Array<{ stage: string; date: string }>) || [];
+  const currentStageIndex = WORKFLOW_STAGES.indexOf(currentStage);
 
   return WORKFLOW_STAGES.map((stage, index) => {
-    const historyEntry = stageHistory.find((h: any) => h.stage === stage);
+    const historyEntry = stageHistory.find((h) => h.stage === stage);
     
     let status: "completed" | "active" | "pending";
     if (index < currentStageIndex) {
@@ -76,11 +76,11 @@ export async function updateWorkflowStatus(
   // Get current workflow
   const { data: existing } = await supabase
     .from("workflow_status")
-    .select("*")
+    .select("stage_history")
     .eq("application_id", applicationId)
     .maybeSingle();
 
-  const stageHistory = (existing?.stage_history as any[]) || [];
+  const stageHistory = (existing?.stage_history as Array<{ stage: string; date: string }>) || [];
   stageHistory.push({
     stage: newStage,
     date: new Date().toISOString(),
