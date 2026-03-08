@@ -5,6 +5,7 @@ import { FeatureHighlights } from "@/components/landing/FeatureHighlights";
 import { RiskEngineSection } from "@/components/landing/RiskEngineSection";
 import { CAMSection } from "@/components/landing/CAMSection";
 import { AIAssistantSection } from "@/components/landing/AIAssistantSection";
+import { SocialProofSection } from "@/components/landing/SocialProofSection";
 import { Footer } from "@/components/landing/Footer";
 
 export default function Index() {
@@ -12,6 +13,7 @@ export default function Index() {
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />
       <HeroSection />
+      <SocialProofSection />
       <ArchitectureDiagram />
       <FeatureHighlights />
       <RiskEngineSection />

@@ -26,10 +26,10 @@ export function Footer() {
             <h4 className="text-sm font-semibold mb-4">Quick Links</h4>
             <div className="space-y-2.5">
               {[
-                { label: "Features", href: "#features" },
+                { label: "Platform", href: "#features" },
                 { label: "AI Engine", href: "#architecture" },
-                { label: "Risk Intelligence", href: "#risk-engine" },
-                { label: "CAM Generator", href: "#cam" },
+                { label: "Features", href: "#risk-engine" },
+                { label: "Solutions", href: "#cam" },
               ].map((l) => (
                 <a key={l.label} href={l.href} className="block text-sm text-muted-foreground hover:text-foreground transition-colors">
                   {l.label}
