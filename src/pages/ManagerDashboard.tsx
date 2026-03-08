@@ -4,7 +4,6 @@ import { FileText, AlertTriangle, TrendingUp, IndianRupee, XCircle, Eye, Gavel, 
 import { KpiCard } from "@/components/ui/kpi-card";
 import { RiskBadge } from "@/components/ui/risk-badge";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { monthlyTrend } from "@/lib/mock-data";
 import { useRealtimeApplications } from "@/hooks/useRealtimeApplications";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,10 +33,9 @@ function getCellTextColor(level: typeof riskLevels[number], count: number) {
 function PortfolioRiskHeatmap({ applications }: { applications: { sector: string; risk_score: number | null }[] }) {
   const [hoveredCell, setHoveredCell] = useState<string | null>(null);
 
-  // Build heatmap from live data
-  const sectorMap: Record<string, { low: number; medium: number; high: number; exposure: number }> = {};
+  const sectorMap: Record<string, { low: number; medium: number; high: number }> = {};
   applications.forEach(a => {
-    if (!sectorMap[a.sector]) sectorMap[a.sector] = { low: 0, medium: 0, high: 0, exposure: 0 };
+    if (!sectorMap[a.sector]) sectorMap[a.sector] = { low: 0, medium: 0, high: 0 };
     const s = a.risk_score ?? 50;
     if (s <= 40) sectorMap[a.sector].low++;
     else if (s <= 65) sectorMap[a.sector].medium++;
@@ -45,10 +43,7 @@ function PortfolioRiskHeatmap({ applications }: { applications: { sector: string
   });
 
   const heatmapData = Object.entries(sectorMap).map(([sector, data]) => ({ sector, ...data }));
-
   if (heatmapData.length === 0) return <p className="text-xs text-muted-foreground text-center py-4">No data available</p>;
-
-  const totalApps = applications.length;
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -56,9 +51,7 @@ function PortfolioRiskHeatmap({ applications }: { applications: { sector: string
         <div className="grid gap-1" style={{ gridTemplateColumns: `140px repeat(3, 1fr)` }}>
           <div />
           {riskLevels.map(l => (
-            <div key={l} className="text-center text-[10px] uppercase tracking-wider text-muted-foreground font-semibold py-1">
-              {l}
-            </div>
+            <div key={l} className="text-center text-[10px] uppercase tracking-wider text-muted-foreground font-semibold py-1">{l}</div>
           ))}
           {heatmapData.map(row => (
             <>
@@ -79,19 +72,38 @@ function PortfolioRiskHeatmap({ applications }: { applications: { sector: string
                         <span className="text-xs font-bold">{count}</span>
                       </motion.div>
                     </TooltipTrigger>
-                    <TooltipContent className="text-xs">
-                      {row.sector} — {level} risk: {count} apps
-                    </TooltipContent>
+                    <TooltipContent className="text-xs">{row.sector} — {level} risk: {count} apps</TooltipContent>
                   </Tooltip>
                 );
               })}
             </>
           ))}
         </div>
-        <div className="text-xs font-semibold text-foreground">Total: {totalApps} applications</div>
+        <div className="text-xs font-semibold text-foreground">Total: {applications.length} applications</div>
       </div>
     </TooltipProvider>
   );
+}
+
+// Compute monthly trend from application created_at dates
+function computeMonthlyTrend(applications: { status: string; created_at: string }[]) {
+  const months: Record<string, { approved: number; rejected: number; pending: number }> = {};
+  const now = new Date();
+  for (let i = 7; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = d.toLocaleString("en-US", { month: "short" });
+    months[key] = { approved: 0, rejected: 0, pending: 0 };
+  }
+  applications.forEach(a => {
+    const d = new Date(a.created_at);
+    const key = d.toLocaleString("en-US", { month: "short" });
+    if (months[key]) {
+      if (a.status === "Approved") months[key].approved++;
+      else if (a.status === "Rejected") months[key].rejected++;
+      else months[key].pending++;
+    }
+  });
+  return Object.entries(months).map(([month, data]) => ({ month, ...data }));
 }
 
 export default function ManagerDashboard() {
@@ -99,9 +111,9 @@ export default function ManagerDashboard() {
   const { applications, loading, hasLiveData, kpis, riskBreakdown, sectorExposure } = useRealtimeApplications();
 
   const isEmpty = !loading && applications.length === 0;
-
   const riskData = riskBreakdown;
   const sectorData = sectorExposure.length > 0 ? sectorExposure : [];
+  const monthlyTrend = computeMonthlyTrend(applications);
 
   return (
     <div className="space-y-6">

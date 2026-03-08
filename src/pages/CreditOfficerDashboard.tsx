@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   FileText, FileCheck, Shield, BookOpen, Clock, ChevronRight,
@@ -11,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useRealtimeApplications, DbApp } from "@/hooks/useRealtimeApplications";
+import { supabase } from "@/integrations/supabase/client";
 import {
   AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip as RechartsTooltip,
   PieChart, Pie, Cell,
@@ -21,12 +23,12 @@ const weeklyTrend = [
   { day: "Thu", apps: 7 }, { day: "Fri", apps: 6 }, { day: "Sat", apps: 2 }, { day: "Sun", apps: 1 },
 ];
 
-const activityFeed = [
-  { icon: FileCheck, text: "Documents verified", time: "12 min ago", color: "text-risk-low" },
-  { icon: Shield, text: "High Risk flagged", time: "45 min ago", color: "text-risk-high" },
-  { icon: BookOpen, text: "CAM generated", time: "1 hr ago", color: "text-primary" },
-  { icon: Brain, text: "ML model retrained", time: "2 hrs ago", color: "text-chart-4" },
-];
+interface AuditActivity {
+  icon: typeof FileCheck;
+  text: string;
+  time: string;
+  color: string;
+}
 
 function EmptyState({ onNavigate }: { onNavigate: () => void }) {
   return (
@@ -41,10 +43,49 @@ function EmptyState({ onNavigate }: { onNavigate: () => void }) {
   );
 }
 
+function getTimeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs} hr ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
+function getActivityIcon(eventType: string) {
+  if (eventType.includes("Document")) return { icon: FileCheck, color: "text-risk-low" };
+  if (eventType.includes("Risk") || eventType.includes("High")) return { icon: Shield, color: "text-risk-high" };
+  if (eventType.includes("CAM")) return { icon: BookOpen, color: "text-primary" };
+  if (eventType.includes("Decision") || eventType.includes("Manager")) return { icon: Brain, color: "text-chart-4" };
+  return { icon: FileText, color: "text-muted-foreground" };
+}
+
 export default function CreditOfficerDashboard() {
   const navigate = useNavigate();
   const { setSelectedApplication } = useApplicationStore();
   const { applications, loading, hasLiveData, kpis, riskBreakdown } = useRealtimeApplications();
+  const [activityFeed, setActivityFeed] = useState<AuditActivity[]>([]);
+
+  // Fetch recent audit logs for activity feed
+  useEffect(() => {
+    const fetchActivity = async () => {
+      try {
+        const { data } = await supabase
+          .from("audit_logs")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(5);
+        if (data && data.length > 0) {
+          setActivityFeed(data.map(d => {
+            const { icon, color } = getActivityIcon(d.event_type);
+            return { icon, text: d.event_description, time: getTimeAgo(d.created_at), color };
+          }));
+        }
+      } catch { /* empty */ }
+    };
+    fetchActivity();
+  }, []);
 
   const handleSelectApp = (app: DbApp) => {
     setSelectedApplication({
@@ -66,7 +107,6 @@ export default function CreditOfficerDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
@@ -84,7 +124,6 @@ export default function CreditOfficerDashboard() {
         </div>
       </div>
 
-      {/* KPI Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <motion.div whileHover={{ scale: 1.02 }} className="cursor-pointer" onClick={() => navigate("/applications")}>
           <KpiCard title="Total Applications" value={kpis.total} icon={FileText} trend={{ value: 12, positive: true }} index={0} />
@@ -107,7 +146,6 @@ export default function CreditOfficerDashboard() {
         <EmptyState onNavigate={() => navigate("/applications")} />
       ) : (
         <>
-          {/* Charts Row */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="glass-card p-5 lg:col-span-2">
               <div className="flex items-center justify-between mb-4">
@@ -155,7 +193,6 @@ export default function CreditOfficerDashboard() {
             </motion.div>
           </div>
 
-          {/* Quick Actions + Activity Feed */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="glass-card p-5">
               <h3 className="text-sm font-semibold text-foreground mb-4">Quick Actions</h3>
@@ -167,15 +204,10 @@ export default function CreditOfficerDashboard() {
                   { label: "Generate CAM", icon: BookOpen, path: "/cam-generator", desc: "Credit appraisal memo" },
                   { label: "Decision Center", icon: Brain, path: "/decision-center", desc: "Committee review" },
                 ].map((action) => (
-                  <motion.button
-                    key={action.path}
-                    whileHover={{ x: 4 }}
-                    onClick={() => navigate(action.path)}
+                  <motion.button key={action.path} whileHover={{ x: 4 }} onClick={() => navigate(action.path)}
                     className="flex items-center gap-3 w-full p-3 rounded-xl hover:bg-muted/50 transition-colors text-left group"
                   >
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <action.icon className="h-4 w-4 text-primary" />
-                    </div>
+                    <div className="p-2 rounded-lg bg-primary/10"><action.icon className="h-4 w-4 text-primary" /></div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium text-foreground">{action.label}</p>
                       <p className="text-[10px] text-muted-foreground">{action.desc}</p>
@@ -189,27 +221,26 @@ export default function CreditOfficerDashboard() {
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="glass-card p-5 lg:col-span-2">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-foreground">Recent Activity</h3>
-                <span className="text-[10px] text-muted-foreground">Auto-refreshing</span>
+                <span className="text-[10px] text-muted-foreground">From audit logs</span>
               </div>
               <div className="space-y-3">
-                {activityFeed.map((item, i) => (
+                {activityFeed.length > 0 ? activityFeed.map((item, i) => (
                   <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.35 + i * 0.05 }}
                     className="flex items-start gap-3 p-3 rounded-xl bg-muted/20 border border-border/20"
                   >
-                    <div className={`p-1.5 rounded-lg bg-muted/50 ${item.color}`}>
-                      <item.icon className="h-3.5 w-3.5" />
-                    </div>
+                    <div className={`p-1.5 rounded-lg bg-muted/50 ${item.color}`}><item.icon className="h-3.5 w-3.5" /></div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs text-foreground">{item.text}</p>
                       <p className="text-[10px] text-muted-foreground mt-0.5">{item.time}</p>
                     </div>
                   </motion.div>
-                ))}
+                )) : (
+                  <p className="text-xs text-muted-foreground text-center py-4">No recent activity. Create an application to get started.</p>
+                )}
               </div>
             </motion.div>
           </div>
 
-          {/* Pipeline Overview */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="glass-card p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-foreground">Pipeline Overview</h3>
@@ -236,7 +267,6 @@ export default function CreditOfficerDashboard() {
             </div>
           </motion.div>
 
-          {/* Recent Applications Table */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="glass-card overflow-hidden">
             <div className="p-5 border-b border-border/50 flex items-center justify-between">
               <h3 className="text-sm font-semibold text-foreground">Recent Applications</h3>

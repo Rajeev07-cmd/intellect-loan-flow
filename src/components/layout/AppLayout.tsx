@@ -6,19 +6,11 @@ import { Bell, Search, X, Building2, ChevronDown, Loader2 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { companyApplications } from "@/lib/company-data";
 import { useApplicationStore, type CompanyApplication } from "@/store/useApplicationStore";
 import { useToast } from "@/hooks/use-toast";
 import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { getNotifications, markNotificationRead, markAllNotificationsRead, subscribeToNotifications, type Notification } from "@/services/notifications";
-
-// Fallback mock notifications
-const mockNotifications = [
-  { id: "mock-1", application_id: null, title: "High Risk Alert", description: "Adani Ports & SEZ flagged — Risk Score 72", severity: "error", is_read: false, created_at: new Date(Date.now() - 5 * 60000).toISOString() },
-  { id: "mock-2", application_id: null, title: "CAM Report Ready", description: "Tata Steel Ltd CAM v2.1 generated", severity: "info", is_read: false, created_at: new Date(Date.now() - 60 * 60000).toISOString() },
-  { id: "mock-3", application_id: null, title: "Committee Decision Pending", description: "ABC Industries awaiting approval", severity: "warning", is_read: true, created_at: new Date(Date.now() - 2 * 3600000).toISOString() },
-];
 
 function getTimeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -83,7 +75,7 @@ function mapDbToSelectorApp(db: any): CompanyApplication {
 export function AppLayout() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
-  const [notifs, setNotifs] = useState<Notification[]>(mockNotifications);
+  const [notifs, setNotifs] = useState<Notification[]>([]);
   const [appSelectorOpen, setAppSelectorOpen] = useState(false);
   const [dbApps, setDbApps] = useState<CompanyApplication[]>([]);
   const [loadingApps, setLoadingApps] = useState(false);
@@ -105,7 +97,7 @@ export function AppLayout() {
           setDbApps(data.map(mapDbToSelectorApp));
         }
       } catch (e) {
-        // fallback to mock only
+        // no data
       } finally {
         setLoadingApps(false);
       }
@@ -113,10 +105,8 @@ export function AppLayout() {
     const fetchNotifs = async () => {
       try {
         const dbNotifs = await getNotifications();
-        if (dbNotifs.length > 0) {
-          setNotifs(dbNotifs);
-        }
-      } catch { /* keep mock */ }
+        setNotifs(dbNotifs);
+      } catch { /* empty */ }
     };
     fetchApps();
     fetchNotifs();
@@ -125,22 +115,16 @@ export function AppLayout() {
     return () => { sub.unsubscribe(); };
   }, []);
 
-  const allSelectorApps = useMemo(() => {
-    const dbIds = new Set(dbApps.map(a => a.id));
-    const mockOnly = companyApplications.filter(a => !dbIds.has(a.id));
-    return [...dbApps, ...mockOnly];
-  }, [dbApps]);
-
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
     const q = searchQuery.toLowerCase();
-    return allSelectorApps.filter(app =>
+    return dbApps.filter(app =>
       app.company.toLowerCase().includes(q) ||
       app.cin.toLowerCase().includes(q) ||
       app.sector.toLowerCase().includes(q) ||
       app.id.toLowerCase().includes(q)
     );
-  }, [searchQuery, allSelectorApps]);
+  }, [searchQuery, dbApps]);
 
   const unreadCount = notifs.filter(n => !n.is_read).length;
   const markAllRead = async () => {
@@ -235,18 +219,15 @@ export function AppLayout() {
                       className="absolute top-full left-0 mt-1 w-80 bg-popover border border-border rounded-xl shadow-xl z-50 max-h-80 overflow-auto"
                     >
                       <div className="p-2">
-                        {dbApps.length > 0 && (
-                          <>
-                            <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold px-2 py-1">Database Applications</p>
-                            {dbApps.map((app) => (
-                              <AppSelectorItem key={app.id} app={app} selected={selectedApplication?.id === app.id} onSelect={handleSelectApp} />
-                            ))}
-                          </>
+                        {dbApps.length > 0 ? (
+                          dbApps.map((app) => (
+                            <AppSelectorItem key={app.id} app={app} selected={selectedApplication?.id === app.id} onSelect={handleSelectApp} />
+                          ))
+                        ) : (
+                          <div className="px-3 py-4 text-center">
+                            <p className="text-xs text-muted-foreground">No applications found. Create one first.</p>
+                          </div>
                         )}
-                        <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold px-2 py-1 mt-1">Demo Applications</p>
-                        {companyApplications.map((app) => (
-                          <AppSelectorItem key={app.id} app={app} selected={selectedApplication?.id === app.id} onSelect={handleSelectApp} />
-                        ))}
                       </div>
                     </motion.div>
                   )}
@@ -278,26 +259,32 @@ export function AppLayout() {
                     )}
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  {notifs.map(n => {
-                    const timeAgo = getTimeAgo(n.created_at);
-                    return (
-                      <DropdownMenuItem
-                        key={n.id}
-                        className={`flex flex-col items-start gap-0.5 py-2.5 cursor-pointer ${!n.is_read ? "bg-primary/5" : ""}`}
-                        onClick={async () => {
-                          setNotifs(prev => prev.map(x => x.id === n.id ? { ...x, is_read: true } : x));
-                          await markNotificationRead(n.id);
-                        }}
-                      >
-                        <div className="flex items-center gap-2 w-full">
-                          {!n.is_read && <div className="h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />}
-                          <span className="text-xs font-medium text-foreground">{n.title}</span>
-                          <span className="text-[9px] text-muted-foreground ml-auto">{timeAgo}</span>
-                        </div>
-                        <span className="text-[10px] text-muted-foreground ml-3.5">{n.description}</span>
-                      </DropdownMenuItem>
-                    );
-                  })}
+                  {notifs.length === 0 ? (
+                    <div className="px-3 py-4 text-center">
+                      <p className="text-xs text-muted-foreground">No notifications yet</p>
+                    </div>
+                  ) : (
+                    notifs.map(n => {
+                      const timeAgo = getTimeAgo(n.created_at);
+                      return (
+                        <DropdownMenuItem
+                          key={n.id}
+                          className={`flex flex-col items-start gap-0.5 py-2.5 cursor-pointer ${!n.is_read ? "bg-primary/5" : ""}`}
+                          onClick={async () => {
+                            setNotifs(prev => prev.map(x => x.id === n.id ? { ...x, is_read: true } : x));
+                            await markNotificationRead(n.id);
+                          }}
+                        >
+                          <div className="flex items-center gap-2 w-full">
+                            {!n.is_read && <div className="h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />}
+                            <span className="text-xs font-medium text-foreground">{n.title}</span>
+                            <span className="text-[9px] text-muted-foreground ml-auto">{timeAgo}</span>
+                          </div>
+                          <span className="text-[10px] text-muted-foreground ml-3.5">{n.description}</span>
+                        </DropdownMenuItem>
+                      );
+                    })
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
               <div className="h-5 w-px bg-border/50" />
