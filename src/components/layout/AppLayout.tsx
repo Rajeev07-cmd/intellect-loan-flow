@@ -20,6 +20,16 @@ const mockNotifications = [
   { id: "mock-3", application_id: null, title: "Committee Decision Pending", description: "ABC Industries awaiting approval", severity: "warning", is_read: true, created_at: new Date(Date.now() - 2 * 3600000).toISOString() },
 ];
 
+function getTimeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs} hr ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
 function mapDbToSelectorApp(db: any): CompanyApplication {
   return {
     id: db.id,
