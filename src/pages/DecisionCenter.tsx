@@ -29,7 +29,6 @@ import { updateWorkflowStatus } from "@/services/workflowStatus";
 import { supabase } from "@/integrations/supabase/client";
 import { getDecisionState, submitManagerDecision, type ManagerDecision, type DecisionState } from "@/services/decisionEngine";
 import { useAuth } from "@/contexts/AuthContext";
-import { useRealtimeApplications } from "@/hooks/useRealtimeApplications";
 
 const decisionReasons = [
   "Strong collateral coverage",
