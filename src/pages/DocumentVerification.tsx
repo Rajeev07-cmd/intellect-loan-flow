@@ -14,6 +14,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useApplicationStore } from "@/store/useApplicationStore";
 import { ActiveApplicationBanner, NoApplicationSelected } from "@/components/ActiveApplicationBanner";
 import { supabase } from "@/integrations/supabase/client";
+import { logAuditEvent } from "@/services/auditLog";
+import { createNotification } from "@/services/notifications";
 
 interface DocFile {
   id: string;
@@ -246,6 +248,12 @@ export default function DocumentVerification() {
             : d
         ));
 
+        // Log audit event
+        const isUUID = /^[0-9a-f]{8}-/i.test(selectedApplication!.id);
+        if (isUUID) {
+          await logAuditEvent("Document Uploaded", `${file.name} uploaded`, selectedApplication!.id, "Credit Officer");
+        }
+
         toast({ 
           title: "Upload Complete", 
           description: `${file.name} uploaded successfully` 
@@ -331,6 +339,13 @@ export default function DocumentVerification() {
       } catch (e) {
         // Ignore DB errors
       }
+    }
+
+    // Log audit event
+    const isUUID = /^[0-9a-f]{8}-/i.test(selectedApplication!.id);
+    if (isUUID) {
+      await logAuditEvent("Verification Completed", "All documents verified", selectedApplication!.id, "System");
+      await createNotification("Verification Complete", `Document verification completed for ${selectedApplication!.company}`, "info", selectedApplication!.id);
     }
 
     setVerifying(false);

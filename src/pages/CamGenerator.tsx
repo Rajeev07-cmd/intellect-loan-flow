@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { FileDown, Share2, Download, Loader2, CheckCircle, XCircle, AlertTriangle, FileText, Shield, Building2, BarChart3, Gavel } from "lucide-react";
+import { FileDown, Share2, Download, Loader2, CheckCircle, XCircle, AlertTriangle, FileText, Shield, Building2, BarChart3, Gavel, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useApplicationStore } from "@/store/useApplicationStore";
 import { ActiveApplicationBanner, NoApplicationSelected } from "@/components/ActiveApplicationBanner";
-
+import { saveCamReport, getCamReport } from "@/services/camReports";
+import { logAuditEvent } from "@/services/auditLog";
 const outlineItems = [
   { id: "overview", label: "Company Overview", icon: Building2 },
   { id: "financial", label: "Financial Analysis", icon: BarChart3 },
@@ -20,6 +21,8 @@ export default function CamGenerator() {
   const { selectedApplication } = useApplicationStore();
   const [exporting, setExporting] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState("overview");
+  const [saving, setSaving] = useState(false);
+  const [savedToDb, setSavedToDb] = useState(false);
 
   if (!selectedApplication) return <NoApplicationSelected />;
 
@@ -33,6 +36,31 @@ export default function CamGenerator() {
       setExporting(null);
       toast({ title: `${format} Ready`, description: `CAM exported as ${format}. Download started.` });
     }, 2000);
+  };
+
+  const handleSaveToDb = async () => {
+    const isUUID = /^[0-9a-f]{8}-/i.test(app.id);
+    if (!isUUID) {
+      toast({ title: "Demo Application", description: "CAM reports can only be saved for database applications." });
+      return;
+    }
+    setSaving(true);
+    try {
+      await saveCamReport(app.id, {
+        company_overview: `${app.company} — ${app.sector} — CIN: ${app.cin}`,
+        financial_analysis: `Revenue: ${app.financials.revenue}, DSCR: ${app.financials.dscr}x, D/E: ${app.financials.debtEquity}x`,
+        risk_analysis: app.explainableAI.map(e => e.text).join("; "),
+        recommendation: app.recommendation,
+        suggested_loan_limit: app.suggestedLimit,
+        interest_rate: app.interestRate,
+      });
+      setSavedToDb(true);
+      toast({ title: "CAM Saved", description: "Report saved to database successfully." });
+    } catch (e) {
+      toast({ title: "Save Failed", description: "Could not save CAM report.", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleShare = () => {
@@ -59,6 +87,10 @@ export default function CamGenerator() {
           </Button>
           <Button variant="outline" size="sm" className="gap-2 rounded-xl" disabled={exporting === "Word"} onClick={() => handleExport("Word")}>
             {exporting === "Word" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} Word
+          </Button>
+          <Button variant="outline" size="sm" className="gap-2 rounded-xl" onClick={handleSaveToDb} disabled={saving || savedToDb}>
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : savedToDb ? <CheckCircle className="h-4 w-4" /> : <Save className="h-4 w-4" />}
+            {saving ? "Saving..." : savedToDb ? "Saved" : "Save to DB"}
           </Button>
           <Button size="sm" className="gap-2 rounded-xl" onClick={handleShare}>
             <Share2 className="h-4 w-4" /> Share

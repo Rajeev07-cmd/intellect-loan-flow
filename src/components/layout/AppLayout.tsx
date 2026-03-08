@@ -11,14 +11,24 @@ import { useApplicationStore, type CompanyApplication } from "@/store/useApplica
 import { useToast } from "@/hooks/use-toast";
 import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
+import { getNotifications, markNotificationRead, markAllNotificationsRead, subscribeToNotifications, type Notification } from "@/services/notifications";
 
-const notifications = [
-  { id: 1, title: "High Risk Alert", desc: "Adani Ports & SEZ flagged — Risk Score 72", time: "5 min ago", read: false },
-  { id: 2, title: "CAM Report Ready", desc: "Tata Steel Ltd CAM v2.1 generated", time: "1 hour ago", read: false },
-  { id: 3, title: "Committee Decision Pending", desc: "ABC Industries awaiting approval", time: "2 hours ago", read: true },
-  { id: 4, title: "Document Verification", desc: "Director KYC verification failed", time: "3 hours ago", read: false },
-  { id: 5, title: "New Application", desc: "JSW Steel Ltd — ₹450 Cr term loan", time: "5 hours ago", read: true },
+// Fallback mock notifications
+const mockNotifications = [
+  { id: "mock-1", application_id: null, title: "High Risk Alert", description: "Adani Ports & SEZ flagged — Risk Score 72", severity: "error", is_read: false, created_at: new Date(Date.now() - 5 * 60000).toISOString() },
+  { id: "mock-2", application_id: null, title: "CAM Report Ready", description: "Tata Steel Ltd CAM v2.1 generated", severity: "info", is_read: false, created_at: new Date(Date.now() - 60 * 60000).toISOString() },
+  { id: "mock-3", application_id: null, title: "Committee Decision Pending", description: "ABC Industries awaiting approval", severity: "warning", is_read: true, created_at: new Date(Date.now() - 2 * 3600000).toISOString() },
 ];
+
+function getTimeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs} hr ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
 
 function mapDbToSelectorApp(db: any): CompanyApplication {
   return {
@@ -73,7 +83,7 @@ function mapDbToSelectorApp(db: any): CompanyApplication {
 export function AppLayout() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
-  const [notifRead, setNotifRead] = useState<number[]>(notifications.filter(n => n.read).map(n => n.id));
+  const [notifs, setNotifs] = useState<Notification[]>(mockNotifications);
   const [appSelectorOpen, setAppSelectorOpen] = useState(false);
   const [dbApps, setDbApps] = useState<CompanyApplication[]>([]);
   const [loadingApps, setLoadingApps] = useState(false);
@@ -82,7 +92,7 @@ export function AppLayout() {
   const { toast } = useToast();
   const { selectedApplication, setSelectedApplication } = useApplicationStore();
 
-  // Fetch DB applications for the selector
+  // Fetch DB applications and notifications
   useEffect(() => {
     const fetchApps = async () => {
       setLoadingApps(true);
@@ -100,7 +110,19 @@ export function AppLayout() {
         setLoadingApps(false);
       }
     };
+    const fetchNotifs = async () => {
+      try {
+        const dbNotifs = await getNotifications();
+        if (dbNotifs.length > 0) {
+          setNotifs(dbNotifs);
+        }
+      } catch { /* keep mock */ }
+    };
     fetchApps();
+    fetchNotifs();
+
+    const sub = subscribeToNotifications((updated) => setNotifs(updated));
+    return () => { sub.unsubscribe(); };
   }, []);
 
   const allSelectorApps = useMemo(() => {
@@ -120,8 +142,11 @@ export function AppLayout() {
     );
   }, [searchQuery, allSelectorApps]);
 
-  const unreadCount = notifications.filter(n => !notifRead.includes(n.id)).length;
-  const markAllRead = () => setNotifRead(notifications.map(n => n.id));
+  const unreadCount = notifs.filter(n => !n.is_read).length;
+  const markAllRead = async () => {
+    setNotifs(prev => prev.map(n => ({ ...n, is_read: true })));
+    await markAllNotificationsRead();
+  };
 
   const handleSelectApp = (app: CompanyApplication) => {
     setSelectedApplication(app);
@@ -253,20 +278,26 @@ export function AppLayout() {
                     )}
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  {notifications.map(n => (
-                    <DropdownMenuItem
-                      key={n.id}
-                      className={`flex flex-col items-start gap-0.5 py-2.5 cursor-pointer ${!notifRead.includes(n.id) ? "bg-primary/5" : ""}`}
-                      onClick={() => setNotifRead(prev => prev.includes(n.id) ? prev : [...prev, n.id])}
-                    >
-                      <div className="flex items-center gap-2 w-full">
-                        {!notifRead.includes(n.id) && <div className="h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />}
-                        <span className="text-xs font-medium text-foreground">{n.title}</span>
-                        <span className="text-[9px] text-muted-foreground ml-auto">{n.time}</span>
-                      </div>
-                      <span className="text-[10px] text-muted-foreground ml-3.5">{n.desc}</span>
-                    </DropdownMenuItem>
-                  ))}
+                  {notifs.map(n => {
+                    const timeAgo = getTimeAgo(n.created_at);
+                    return (
+                      <DropdownMenuItem
+                        key={n.id}
+                        className={`flex flex-col items-start gap-0.5 py-2.5 cursor-pointer ${!n.is_read ? "bg-primary/5" : ""}`}
+                        onClick={async () => {
+                          setNotifs(prev => prev.map(x => x.id === n.id ? { ...x, is_read: true } : x));
+                          await markNotificationRead(n.id);
+                        }}
+                      >
+                        <div className="flex items-center gap-2 w-full">
+                          {!n.is_read && <div className="h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />}
+                          <span className="text-xs font-medium text-foreground">{n.title}</span>
+                          <span className="text-[9px] text-muted-foreground ml-auto">{timeAgo}</span>
+                        </div>
+                        <span className="text-[10px] text-muted-foreground ml-3.5">{n.description}</span>
+                      </DropdownMenuItem>
+                    );
+                  })}
                 </DropdownMenuContent>
               </DropdownMenu>
               <div className="h-5 w-px bg-border/50" />

@@ -8,6 +8,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useApplicationStore } from "@/store/useApplicationStore";
 import { ActiveApplicationBanner, NoApplicationSelected } from "@/components/ActiveApplicationBanner";
 import { runRiskAnalysis, type RiskAnalysisResult } from "@/services/riskAnalysis";
+import { logAuditEvent } from "@/services/auditLog";
+import { createNotification } from "@/services/notifications";
 import { useApiCall } from "@/hooks/useApiCall";
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
@@ -22,9 +24,19 @@ export default function RiskEngine() {
   const { loading: analyzing, usingFallback, execute: executeRiskAnalysis } = useApiCall(
     runRiskAnalysis,
     {
-      onSuccess: (result) => {
+      onSuccess: async (result) => {
         setLiveResult(result);
         toast({ title: "ML Model Response", description: `Risk Score: ${result.risk_score} — ${result.risk_category}` });
+        // Log audit
+        if (selectedApplication) {
+          const isUUID = /^[0-9a-f]{8}-/i.test(selectedApplication.id);
+          if (isUUID) {
+            await logAuditEvent("Risk Analysis Completed", `Risk Score: ${result.risk_score} — ${result.risk_category}`, selectedApplication.id, "System");
+            if (result.risk_score > 65) {
+              await createNotification("High Risk Detected", `${selectedApplication.company} — Risk Score: ${result.risk_score}`, "error", selectedApplication.id);
+            }
+          }
+        }
       },
       onError: () => {
         toast({ title: "Backend Unavailable", description: "Using pre-computed mock data. Start your FastAPI server to get live predictions.", variant: "destructive" });
