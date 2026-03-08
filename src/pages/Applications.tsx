@@ -265,7 +265,7 @@ export default function Applications() {
         )}
       </motion.div>
 
-      <NewApplicationModal 
+      <NewApplicationWizard 
         open={showNewModal} 
         onOpenChange={setShowNewModal} 
         onSuccess={fetchApplications}
