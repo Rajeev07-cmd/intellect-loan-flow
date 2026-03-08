@@ -316,6 +316,9 @@ export default function RiskEngine() {
           ))}
         </div>
       </motion.div>
+
+      {/* Credit Officer Decision Panel */}
+      <CreditOfficerDecisionPanel />
     </div>
   );
 }
