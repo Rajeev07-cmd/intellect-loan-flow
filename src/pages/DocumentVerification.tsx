@@ -126,24 +126,31 @@ export default function DocumentVerification() {
 
     const filePath = `${selectedApplication.id}/${Date.now()}_${file.name}`;
     
-    const { data, error } = await supabase.storage
-      .from("documents")
-      .upload(filePath, file, {
-        onUploadProgress: (progress) => {
-          const percent = Math.round((progress.loaded / progress.total) * 100);
-          setDocs(prev => prev.map(d => 
-            d.id === docId ? { ...d, progress: percent } : d
-          ));
-        }
-      });
+    // Simulate progress since Supabase JS doesn't support onUploadProgress
+    const progressInterval = setInterval(() => {
+      setDocs(prev => prev.map(d => 
+        d.id === docId && d.progress < 90 ? { ...d, progress: d.progress + 10 } : d
+      ));
+    }, 200);
 
-    if (error) throw error;
+    try {
+      const { data, error } = await supabase.storage
+        .from("documents")
+        .upload(filePath, file);
 
-    const { data: urlData } = supabase.storage
-      .from("documents")
-      .getPublicUrl(data.path);
+      clearInterval(progressInterval);
 
-    return urlData.publicUrl;
+      if (error) throw error;
+
+      const { data: urlData } = supabase.storage
+        .from("documents")
+        .getPublicUrl(data.path);
+
+      return urlData.publicUrl;
+    } catch (error) {
+      clearInterval(progressInterval);
+      throw error;
+    }
   };
 
   const saveDocumentMetadata = async (
