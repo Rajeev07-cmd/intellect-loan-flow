@@ -46,29 +46,19 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/reset-password" element={<ResetPassword />} />
-              <Route element={
-                <ProtectedRoute>
-                  <AppLayout />
-                </ProtectedRoute>
-              }>
-                <Route path="/dashboard" element={<CreditOfficerDashboard />} />
-                <Route path="/applications" element={<Applications />} />
-                <Route path="/document-verification" element={<DocumentVerification />} />
-                <Route path="/risk-engine" element={<RiskEngine />} />
-                <Route path="/cam-generator" element={<CamGenerator />} />
-                <Route path="/tracking" element={<Tracking />} />
-                <Route path="/decision-center" element={<DecisionCenter />} />
-                <Route path="/research" element={<AIResearch />} />
-                <Route path="/manager-dashboard" element={
-                  <ProtectedRoute allowedRoles={["manager", "admin"]}>
-                    <ManagerDashboard />
-                  </ProtectedRoute>
-                } />
-                <Route path="/admin/users" element={
-                  <ProtectedRoute allowedRoles={["admin"]}>
-                    <AdminSettings />
-                  </ProtectedRoute>
-                } />
+              <Route element={<ProtectedRoute />}>
+                <Route element={<AppLayout />}>
+                  <Route path="/dashboard" element={<CreditOfficerDashboard />} />
+                  <Route path="/applications" element={<Applications />} />
+                  <Route path="/document-verification" element={<DocumentVerification />} />
+                  <Route path="/risk-engine" element={<RiskEngine />} />
+                  <Route path="/cam-generator" element={<CamGenerator />} />
+                  <Route path="/tracking" element={<Tracking />} />
+                  <Route path="/decision-center" element={<DecisionCenter />} />
+                  <Route path="/research" element={<AIResearch />} />
+                  <Route path="/manager-dashboard" element={<ManagerDashboard />} />
+                  <Route path="/admin/users" element={<AdminSettings />} />
+                </Route>
               </Route>
               <Route path="/credit-officer/*" element={<Navigate to="/dashboard" replace />} />
               <Route path="/manager/*" element={<Navigate to="/manager-dashboard" replace />} />
