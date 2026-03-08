@@ -109,19 +109,32 @@ function CreditOfficerDecisionCenter() {
 // ─── Manager Decision Center ─────────────────────────────────────
 function ManagerDecisionCenter() {
   const { selectedApplication } = useApplicationStore();
-  const { applications } = useRealtimeApplications();
   const [viewMode, setViewMode] = useState<"queue" | "review">("queue");
+  const [managerReviewApps, setManagerReviewApps] = useState<any[]>([]);
 
-  // If an application is selected and it's in Manager Review, show review mode
   useEffect(() => {
     if (selectedApplication) {
       setViewMode("review");
     }
   }, [selectedApplication]);
 
-  const managerReviewApps = applications.filter(
-    (a) => a.status === "Manager Review"
-  );
+  useEffect(() => {
+    const fetchApps = async () => {
+      const { data } = await supabase
+        .from("applications")
+        .select("id, company_name, sector, loan_amount, risk_score, status, credit_officer_decision")
+        .eq("status", "Manager Review")
+        .order("updated_at", { ascending: false });
+      setManagerReviewApps(data || []);
+    };
+    fetchApps();
+
+    const channel = supabase
+      .channel("manager_review_queue")
+      .on("postgres_changes", { event: "*", schema: "public", table: "applications" }, () => fetchApps())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   if (viewMode === "queue" && !selectedApplication) {
     return <ManagerReviewQueue applications={managerReviewApps} onSwitchToReview={() => setViewMode("review")} />;
@@ -135,7 +148,7 @@ function ManagerReviewQueue({
   applications,
   onSwitchToReview,
 }: {
-  applications: { id: string; company_name: string; sector: string; loan_amount: number; risk_score: number | null; status: string }[];
+  applications: { id: string; company_name: string; sector: string; loan_amount: number; risk_score: number | null; status: string; credit_officer_decision: string | null }[];
   onSwitchToReview: () => void;
 }) {
   const { setSelectedApplication } = useApplicationStore();
