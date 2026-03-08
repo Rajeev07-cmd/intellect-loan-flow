@@ -24,18 +24,11 @@ const developers = [
     color: "from-chart-2/30 to-primary/30",
   },
   {
-    name: "Shobha Patel",
+    name: "Subhankar Rath",
     role: "UI/UX Designer",
     description: "Designing intuitive workflows and enterprise-grade visual experiences.",
-    initials: "SP",
+    initials: "SR",
     color: "from-primary/30 to-chart-1/30",
-  },
-  {
-    name: "Amisha Patel",
-    role: "Data & ML Engineer",
-    description: "Engineering data extraction pipelines and machine learning scoring models.",
-    initials: "AP",
-    color: "from-chart-1/30 to-chart-4/30",
   },
 ];
 
