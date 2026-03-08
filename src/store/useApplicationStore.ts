@@ -12,13 +12,13 @@ export interface CompanyApplication {
   status: string;
   defaultProbability: number;
   recommendation: string;
-  interestRate: string;
-  suggestedLimit: string;
-  incorporationYear: string;
-  registeredOffice: string;
-  promoterGroup: string;
-  cibilScore: number;
-  financials: {
+  interestRate?: string;
+  suggestedLimit?: string;
+  incorporationYear?: string;
+  registeredOffice?: string;
+  promoterGroup?: string;
+  cibilScore?: number;
+  financials?: {
     revenue: string;
     outstandingDebt: string;
     dscr: number;
@@ -29,43 +29,43 @@ export interface CompanyApplication {
     interestCoverage: number;
     currentRatio: number;
   };
-  fiveCsScores: {
+  fiveCsScores?: {
     name: string;
     score: number;
     weight: number;
     contribution: number;
     explanation: string;
   }[];
-  documents: {
+  documents?: {
     id: string;
     name: string;
     type: string;
     size: string;
     status: "verified" | "pending" | "failed";
   }[];
-  validations: {
+  validations?: {
     check: string;
     status: "pass" | "warning" | "fail";
     detail: string;
   }[];
-  integrityScore: number;
-  researchFindings: {
+  integrityScore?: number;
+  researchFindings?: {
     source: string;
     date: string;
     title: string;
     sentiment: string;
     confidence: number;
   }[];
-  explainableAI: {
+  explainableAI?: {
     severity: "high" | "medium" | "low";
     text: string;
   }[];
-  pipeline: {
+  pipeline?: {
     stage: string;
     status: "completed" | "active" | "pending";
     date: string;
   }[];
-  comments: {
+  comments?: {
     author: string;
     role: string;
     time: string;
