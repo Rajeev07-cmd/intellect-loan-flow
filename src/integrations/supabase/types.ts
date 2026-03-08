@@ -22,11 +22,14 @@ export type Database = {
           company_name: string
           contact_person: string | null
           created_at: string
+          credit_officer_decision: string | null
           default_probability: number | null
+          final_status: string | null
           id: string
           incorporation_year: string | null
           interest_rate: string | null
           loan_amount: number
+          manager_decision: string | null
           promoter_group: string | null
           recommendation: string | null
           registered_address: string | null
@@ -45,11 +48,14 @@ export type Database = {
           company_name: string
           contact_person?: string | null
           created_at?: string
+          credit_officer_decision?: string | null
           default_probability?: number | null
+          final_status?: string | null
           id?: string
           incorporation_year?: string | null
           interest_rate?: string | null
           loan_amount: number
+          manager_decision?: string | null
           promoter_group?: string | null
           recommendation?: string | null
           registered_address?: string | null
@@ -68,11 +74,14 @@ export type Database = {
           company_name?: string
           contact_person?: string | null
           created_at?: string
+          credit_officer_decision?: string | null
           default_probability?: number | null
+          final_status?: string | null
           id?: string
           incorporation_year?: string | null
           interest_rate?: string | null
           loan_amount?: number
+          manager_decision?: string | null
           promoter_group?: string | null
           recommendation?: string | null
           registered_address?: string | null
