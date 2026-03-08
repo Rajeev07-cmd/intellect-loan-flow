@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { CreditOfficerDecisionPanel } from "@/components/decisions/CreditOfficerDecisionPanel";
+
 import { Info, Brain, TrendingUp, AlertTriangle, Loader2, Wifi, WifiOff } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
