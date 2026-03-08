@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
+import { AICopilot } from "@/components/AICopilot";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { Bell, Search, X, Building2, ChevronDown, Loader2 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -304,6 +305,7 @@ export function AppLayout() {
             <Outlet />
           </main>
         </div>
+        <AICopilot />
       </div>
     </SidebarProvider>
   );
