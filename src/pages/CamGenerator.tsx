@@ -1,16 +1,25 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { FileDown, Share2, Download, Loader2, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
+import { FileDown, Share2, Download, Loader2, CheckCircle, XCircle, AlertTriangle, FileText, Shield, Building2, BarChart3, Gavel } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useApplicationStore } from "@/store/useApplicationStore";
 import { ActiveApplicationBanner, NoApplicationSelected } from "@/components/ActiveApplicationBanner";
 
+const outlineItems = [
+  { id: "overview", label: "Company Overview", icon: Building2 },
+  { id: "financial", label: "Financial Analysis", icon: BarChart3 },
+  { id: "risk", label: "Risk Analysis", icon: Shield },
+  { id: "fivec", label: "Five-C Evaluation", icon: FileText },
+  { id: "recommendation", label: "Recommendation", icon: Gavel },
+];
+
 export default function CamGenerator() {
   const { toast } = useToast();
   const { selectedApplication } = useApplicationStore();
   const [exporting, setExporting] = useState<string | null>(null);
+  const [activeSection, setActiveSection] = useState("overview");
 
   if (!selectedApplication) return <NoApplicationSelected />;
 
@@ -36,7 +45,7 @@ export default function CamGenerator() {
     app.recommendation === "Reject" ? "risk-high" : "risk-medium";
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-6">
       <ActiveApplicationBanner />
 
       <div className="flex items-center justify-between">
@@ -45,115 +54,172 @@ export default function CamGenerator() {
           <p className="text-sm text-muted-foreground mt-1">{app.company} — Generated on March 8, 2026</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-2" disabled={exporting === "PDF"} onClick={() => handleExport("PDF")}>
+          <Button variant="outline" size="sm" className="gap-2 rounded-xl" disabled={exporting === "PDF"} onClick={() => handleExport("PDF")}>
             {exporting === "PDF" ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />} Export PDF
           </Button>
-          <Button variant="outline" size="sm" className="gap-2" disabled={exporting === "Word"} onClick={() => handleExport("Word")}>
+          <Button variant="outline" size="sm" className="gap-2 rounded-xl" disabled={exporting === "Word"} onClick={() => handleExport("Word")}>
             {exporting === "Word" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} Word
           </Button>
-          <Button size="sm" className="gap-2 bg-primary text-primary-foreground" onClick={handleShare}>
-            <Share2 className="h-4 w-4" /> Share with Committee
+          <Button size="sm" className="gap-2 rounded-xl" onClick={handleShare}>
+            <Share2 className="h-4 w-4" /> Share
           </Button>
         </div>
       </div>
 
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-8 space-y-8">
-        <div className="text-center border-b border-border/50 pb-6">
-          <h2 className="text-xl font-bold text-foreground">COMPREHENSIVE CREDIT APPRAISAL MEMO</h2>
-          <p className="text-sm text-muted-foreground mt-1">Confidential — For Internal Use Only</p>
-        </div>
-
-        <Section title="1. Company Overview">
-          <div className="grid grid-cols-2 gap-4">
-            {[
-              ["Company Name", app.company],
-              ["CIN", app.cin],
-              ["Sector", app.sector],
-              ["Incorporated", app.incorporationYear],
-              ["Registered Office", app.registeredOffice],
-              ["Promoter Group", app.promoterGroup],
-              ["CIBIL Score", app.cibilScore.toString()],
-              ["Facility Requested", `₹${app.loanAmount} Cr Term Loan`],
-            ].map(([label, value]) => (
-              <div key={label} className="flex justify-between p-2 bg-muted/20 rounded">
-                <span className="text-xs text-muted-foreground">{label}</span>
-                <span className="text-xs font-medium text-foreground">{value}</span>
-              </div>
-            ))}
+      {/* Split Layout: Outline + Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-6">
+        {/* Left Outline */}
+        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="glass-card p-4 h-fit sticky top-20">
+          <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold mb-3 px-2">CAM Outline</p>
+          <div className="space-y-1">
+            {outlineItems.map((item, i) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveSection(item.id)}
+                  className={`flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-xs font-medium transition-all ${
+                    activeSection === item.id
+                      ? "bg-primary/10 text-primary border border-primary/20"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  }`}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {item.label}
+                </button>
+              );
+            })}
           </div>
-        </Section>
+        </motion.div>
 
-        <Separator className="bg-border/30" />
-
-        <Section title="2. Financial Analysis">
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              ["Revenue", app.financials.revenue],
-              ["Outstanding Debt", app.financials.outstandingDebt],
-              ["DSCR", `${app.financials.dscr}x`],
-              ["Debt/Equity", `${app.financials.debtEquity}x`],
-              ["Related Party Txn", app.financials.relatedPartyTransactions],
-              ["GST Mismatch", app.financials.gstMismatch ? app.financials.gstMismatchAmount : "None"],
-            ].map(([label, value]) => (
-              <div key={label as string} className="p-3 bg-muted/20 rounded-lg text-center">
-                <p className="text-lg font-bold text-foreground">{value}</p>
-                <p className="text-[10px] text-muted-foreground mt-1">{label}</p>
-              </div>
-            ))}
+        {/* Right Content */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-8 space-y-8">
+          <div className="text-center border-b border-border/50 pb-6">
+            <h2 className="text-lg font-bold text-foreground uppercase tracking-wider">Comprehensive Credit Appraisal Memo</h2>
+            <p className="text-xs text-muted-foreground mt-1">Confidential — For Internal Use Only</p>
           </div>
-        </Section>
 
-        <Separator className="bg-border/30" />
-
-        <Section title="3. Five Cs Risk Analysis">
-          <div className="space-y-3">
-            {app.fiveCsScores.map(c => (
-              <div key={c.name} className="flex items-center justify-between p-3 bg-muted/20 rounded-lg">
-                <span className="text-sm font-medium text-foreground">{c.name}</span>
-                <div className="flex items-center gap-4">
-                  <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full ${c.score >= 70 ? "bg-risk-low" : c.score >= 50 ? "bg-risk-medium" : "bg-risk-high"}`} style={{ width: `${c.score}%` }} />
-                  </div>
-                  <span className="text-sm font-bold text-foreground w-8">{c.score}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Section>
-
-        <Separator className="bg-border/30" />
-
-        <Section title="4. Final Recommendation">
-          <div className={`p-6 rounded-xl bg-${decisionColor}/5 border border-${decisionColor}/20 text-center space-y-4`}>
-            <div className="flex items-center justify-center gap-2">
-              <DecisionIcon className={`h-6 w-6 text-${decisionColor}`} />
-              <span className={`text-xl font-bold text-${decisionColor}`}>{app.recommendation.toUpperCase()}</span>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {/* Company Overview */}
+          <Section title="1. Company Overview" id="overview" active={activeSection}>
+            <div className="grid grid-cols-2 gap-3">
               {[
-                ["Suggested Limit", app.suggestedLimit],
-                ["Interest Rate", app.interestRate],
-                ["Risk Score", `${app.riskScore}`],
-                ["Default Prob", `${(app.defaultProbability * 100).toFixed(0)}%`],
+                ["Company Name", app.company],
+                ["CIN", app.cin],
+                ["Sector", app.sector],
+                ["Incorporated", app.incorporationYear],
+                ["Registered Office", app.registeredOffice],
+                ["Promoter Group", app.promoterGroup],
+                ["CIBIL Score", app.cibilScore.toString()],
+                ["Facility Requested", `₹${app.loanAmount} Cr Term Loan`],
               ].map(([label, value]) => (
-                <div key={label as string} className="p-3 bg-muted/20 rounded-lg">
-                  <p className="text-lg font-bold text-foreground">{value}</p>
-                  <p className="text-[10px] text-muted-foreground">{label}</p>
+                <div key={label} className="flex justify-between p-3 bg-muted/20 rounded-xl border border-border/20">
+                  <span className="text-xs text-muted-foreground">{label}</span>
+                  <span className="text-xs font-medium text-foreground">{value}</span>
                 </div>
               ))}
             </div>
-          </div>
-        </Section>
-      </motion.div>
+          </Section>
+
+          <Separator className="bg-border/30" />
+
+          {/* Financial Analysis */}
+          <Section title="2. Financial Analysis" id="financial" active={activeSection}>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                ["Revenue", app.financials.revenue],
+                ["Outstanding Debt", app.financials.outstandingDebt],
+                ["DSCR", `${app.financials.dscr}x`],
+                ["Debt/Equity", `${app.financials.debtEquity}x`],
+                ["Related Party Txn", app.financials.relatedPartyTransactions],
+                ["GST Mismatch", app.financials.gstMismatch ? app.financials.gstMismatchAmount : "None"],
+              ].map(([label, value]) => (
+                <div key={label as string} className="p-4 bg-muted/20 rounded-xl text-center border border-border/20">
+                  <p className="text-lg font-bold text-foreground">{value}</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">{label}</p>
+                </div>
+              ))}
+            </div>
+          </Section>
+
+          <Separator className="bg-border/30" />
+
+          {/* Risk Analysis */}
+          <Section title="3. Risk Analysis" id="risk" active={activeSection}>
+            <div className="space-y-3">
+              {app.explainableAI.map((item, i) => (
+                <div key={i} className={`flex items-start gap-3 p-3.5 rounded-xl border ${
+                  item.severity === "high" ? "bg-risk-high/5 border-risk-high/20" :
+                  item.severity === "medium" ? "bg-risk-medium/5 border-risk-medium/20" :
+                  "bg-risk-low/5 border-risk-low/20"
+                }`}>
+                  <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${
+                    item.severity === "high" ? "bg-risk-high" : item.severity === "medium" ? "bg-risk-medium" : "bg-risk-low"
+                  }`} />
+                  <p className="text-sm text-foreground">{item.text}</p>
+                </div>
+              ))}
+            </div>
+          </Section>
+
+          <Separator className="bg-border/30" />
+
+          {/* Five-C Evaluation */}
+          <Section title="4. Five-C Evaluation" id="fivec" active={activeSection}>
+            <div className="space-y-3">
+              {app.fiveCsScores.map(c => (
+                <div key={c.name} className="flex items-center justify-between p-3.5 bg-muted/20 rounded-xl border border-border/20">
+                  <span className="text-sm font-medium text-foreground">{c.name}</span>
+                  <div className="flex items-center gap-4">
+                    <div className="w-28 h-2 bg-muted rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full ${c.score >= 70 ? "bg-risk-low" : c.score >= 50 ? "bg-risk-medium" : "bg-risk-high"}`} style={{ width: `${c.score}%` }} />
+                    </div>
+                    <span className="text-sm font-bold text-foreground w-8 text-right">{c.score}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Section>
+
+          <Separator className="bg-border/30" />
+
+          {/* Recommendation */}
+          <Section title="5. Final Recommendation" id="recommendation" active={activeSection}>
+            <div className={`p-6 rounded-2xl bg-${decisionColor}/5 border border-${decisionColor}/20 text-center space-y-4`}>
+              <div className="flex items-center justify-center gap-2">
+                <DecisionIcon className={`h-6 w-6 text-${decisionColor}`} />
+                <span className={`text-xl font-bold text-${decisionColor}`}>{app.recommendation.toUpperCase()}</span>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {[
+                  ["Suggested Limit", app.suggestedLimit],
+                  ["Interest Rate", app.interestRate],
+                  ["Risk Score", `${app.riskScore}`],
+                  ["Default Prob", `${(app.defaultProbability * 100).toFixed(0)}%`],
+                ].map(([label, value]) => (
+                  <div key={label as string} className="p-3 bg-muted/20 rounded-xl border border-border/20">
+                    <p className="text-lg font-bold text-foreground">{value}</p>
+                    <p className="text-[10px] text-muted-foreground">{label}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Section>
+        </motion.div>
+      </div>
     </div>
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, id, active, children }: { title: string; id: string; active: string; children: React.ReactNode }) {
   return (
-    <div>
+    <motion.div
+      id={id}
+      initial={{ opacity: 0.7 }}
+      animate={{ opacity: active === id ? 1 : 0.6 }}
+      transition={{ duration: 0.3 }}
+    >
       <h3 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4">{title}</h3>
       {children}
-    </div>
+    </motion.div>
   );
 }

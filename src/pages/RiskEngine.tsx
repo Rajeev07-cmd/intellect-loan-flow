@@ -1,8 +1,12 @@
 import { motion } from "framer-motion";
-import { Info, Brain } from "lucide-react";
+import { Info, Brain, TrendingUp, AlertTriangle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { useApplicationStore } from "@/store/useApplicationStore";
 import { ActiveApplicationBanner, NoApplicationSelected } from "@/components/ActiveApplicationBanner";
+import {
+  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
+  BarChart, Bar, XAxis, YAxis, Cell, ResponsiveContainer, Tooltip as RechartsTooltip,
+} from "recharts";
 
 export default function RiskEngine() {
   const { selectedApplication } = useApplicationStore();
@@ -11,6 +15,18 @@ export default function RiskEngine() {
 
   const fiveCsScores = selectedApplication.fiveCsScores;
   const overallScore = fiveCsScores.reduce((sum, c) => sum + c.contribution, 0);
+
+  const radarData = fiveCsScores.map(c => ({
+    subject: c.name,
+    score: c.score,
+    fullMark: 100,
+  }));
+
+  const riskFactorData = fiveCsScores.map(c => ({
+    name: c.name,
+    contribution: c.contribution,
+    score: c.score,
+  }));
 
   return (
     <div className="space-y-6">
@@ -30,37 +46,101 @@ export default function RiskEngine() {
           { label: "CIBIL Score", value: selectedApplication.cibilScore, color: "text-foreground" },
         ].map((kpi, i) => (
           <motion.div key={kpi.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-            className="glass-card p-4"
+            className="glass-card p-5"
           >
-            <p className={`text-2xl font-bold ${kpi.color}`}>{kpi.value}</p>
-            <p className="text-xs text-muted-foreground">{kpi.label}</p>
+            <p className={`text-3xl font-bold ${kpi.color}`}>{kpi.value}</p>
+            <p className="text-xs text-muted-foreground mt-1">{kpi.label}</p>
           </motion.div>
         ))}
       </div>
 
-      {/* Overall Score & Five Cs */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-8 flex flex-col md:flex-row items-center gap-8">
-        <div className="relative">
-          <svg className="w-48 h-48 -rotate-90">
-            <circle cx="96" cy="96" r="80" fill="none" stroke="hsl(var(--muted))" strokeWidth="12" />
-            <circle cx="96" cy="96" r="80" fill="none"
-              stroke={overallScore <= 40 ? "hsl(var(--risk-high))" : overallScore <= 65 ? "hsl(var(--risk-medium))" : "hsl(var(--risk-low))"}
-              strokeWidth="12" strokeLinecap="round"
-              strokeDasharray={`${(overallScore / 100) * 502} 502`}
-            />
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className={`text-4xl font-bold ${overallScore <= 40 ? "text-risk-high" : overallScore <= 65 ? "text-risk-medium" : "text-risk-low"}`}>
-              {overallScore.toFixed(1)}
-            </span>
-            <span className="text-xs text-muted-foreground">Five Cs Score</span>
+      {/* Radar + Score Ring + Bar */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Radar Chart */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-6">
+          <h3 className="text-sm font-semibold text-foreground mb-4">Five Cs Radar</h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="75%">
+                <PolarGrid stroke="hsl(var(--border))" />
+                <PolarAngleAxis dataKey="subject" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
+                <PolarRadiusAxis angle={90} domain={[0, 100]} tick={false} axisLine={false} />
+                <Radar
+                  name="Score"
+                  dataKey="score"
+                  stroke="hsl(var(--primary))"
+                  fill="hsl(var(--primary))"
+                  fillOpacity={0.2}
+                  strokeWidth={2}
+                />
+              </RadarChart>
+            </ResponsiveContainer>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="flex-1 space-y-4 w-full">
+        {/* Score Ring */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass-card p-6 flex flex-col items-center justify-center">
+          <h3 className="text-sm font-semibold text-muted-foreground mb-6">Composite Score</h3>
+          <div className="relative">
+            <svg className="w-44 h-44 -rotate-90">
+              <circle cx="88" cy="88" r="74" fill="none" stroke="hsl(var(--muted))" strokeWidth="10" />
+              <motion.circle
+                cx="88" cy="88" r="74" fill="none"
+                stroke={overallScore <= 40 ? "hsl(var(--risk-high))" : overallScore <= 65 ? "hsl(var(--risk-medium))" : "hsl(var(--risk-low))"}
+                strokeWidth="10" strokeLinecap="round"
+                initial={{ strokeDasharray: "0 465" }}
+                animate={{ strokeDasharray: `${(overallScore / 100) * 465} 465` }}
+                transition={{ duration: 1.2, ease: "easeOut" }}
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className={`text-4xl font-bold ${overallScore <= 40 ? "text-risk-high" : overallScore <= 65 ? "text-risk-medium" : "text-risk-low"}`}>
+                {overallScore.toFixed(1)}
+              </span>
+              <span className="text-[10px] text-muted-foreground mt-1">out of 100</span>
+            </div>
+          </div>
+          <span className={`mt-4 px-3 py-1 rounded-full text-xs font-semibold ${
+            overallScore <= 40 ? "bg-risk-high/15 text-risk-high" : overallScore <= 65 ? "bg-risk-medium/15 text-risk-medium" : "bg-risk-low/15 text-risk-low"
+          }`}>
+            {overallScore <= 40 ? "High Risk" : overallScore <= 65 ? "Medium Risk" : "Low Risk"}
+          </span>
+        </motion.div>
+
+        {/* Contribution Bar */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="glass-card p-6">
+          <h3 className="text-sm font-semibold text-foreground mb-4">Risk Factor Contribution</h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={riskFactorData} layout="vertical" margin={{ left: 10, right: 10 }}>
+                <XAxis type="number" domain={[0, 25]} hide />
+                <YAxis
+                  type="category" dataKey="name"
+                  tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                  width={80} axisLine={false} tickLine={false}
+                />
+                <RechartsTooltip
+                  contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 12, color: "hsl(var(--popover-foreground))", fontSize: 12 }}
+                  formatter={(value: number) => [`${value.toFixed(1)}`, "Contribution"]}
+                />
+                <Bar dataKey="contribution" radius={[0, 6, 6, 0]} barSize={16}>
+                  {riskFactorData.map((entry, i) => (
+                    <Cell key={i} fill={entry.score >= 70 ? "hsl(var(--risk-low))" : entry.score >= 50 ? "hsl(var(--risk-medium))" : "hsl(var(--risk-high))"} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Five Cs Detail */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="glass-card p-6">
+        <h3 className="text-sm font-semibold text-foreground mb-5">Five Cs Breakdown</h3>
+        <div className="space-y-4">
           {fiveCsScores.map((c, i) => (
             <motion.div key={c.name} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.08 }}>
-              <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-foreground">{c.name}</span>
                   <TooltipProvider>
@@ -98,7 +178,7 @@ export default function RiskEngine() {
         <div className="space-y-3">
           {selectedApplication.explainableAI.map((item, i) => (
             <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 + i * 0.05 }}
-              className={`flex items-start gap-3 p-3 rounded-lg border ${
+              className={`flex items-start gap-3 p-3.5 rounded-xl border ${
                 item.severity === "high" ? "bg-risk-high/5 border-risk-high/20" :
                 item.severity === "medium" ? "bg-risk-medium/5 border-risk-medium/20" :
                 "bg-risk-low/5 border-risk-low/20"
@@ -127,9 +207,9 @@ export default function RiskEngine() {
             { label: "CIBIL Score", value: selectedApplication.cibilScore.toString() },
             { label: "Default Prob", value: `${(selectedApplication.defaultProbability * 100).toFixed(0)}%` },
           ].map(r => (
-            <div key={r.label} className="p-3 bg-muted/20 rounded-lg text-center">
-              <p className="text-lg font-bold text-foreground">{r.value}</p>
-              <p className="text-[10px] text-muted-foreground">{r.label}</p>
+            <div key={r.label} className="p-4 bg-muted/20 rounded-xl text-center border border-border/30">
+              <p className="text-xl font-bold text-foreground">{r.value}</p>
+              <p className="text-[10px] text-muted-foreground mt-1">{r.label}</p>
             </div>
           ))}
         </div>
