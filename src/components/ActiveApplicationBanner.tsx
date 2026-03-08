@@ -1,0 +1,66 @@
+import { useApplicationStore } from "@/store/useApplicationStore";
+import { Building2, X } from "lucide-react";
+import { RiskBadge } from "@/components/ui/risk-badge";
+import { useNavigate, useLocation } from "react-router-dom";
+
+export function ActiveApplicationBanner() {
+  const { selectedApplication, clearSelectedApplication } = useApplicationStore();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  if (!selectedApplication) return null;
+
+  const role = localStorage.getItem("userRole") || "credit-officer";
+  const prefix = role === "manager" ? "/manager" : "/credit-officer";
+
+  return (
+    <div className="mb-4 flex items-center justify-between rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
+      <div className="flex items-center gap-3">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+          <Building2 className="h-4 w-4 text-primary" />
+        </div>
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-foreground">{selectedApplication.company}</span>
+            <RiskBadge score={selectedApplication.riskScore} label={selectedApplication.riskCategory} size="sm" />
+          </div>
+          <p className="text-[10px] text-muted-foreground">
+            {selectedApplication.sector} • ₹{selectedApplication.loanAmount} Cr • {selectedApplication.cin}
+          </p>
+        </div>
+      </div>
+      <button
+        onClick={() => {
+          clearSelectedApplication();
+          navigate(`${prefix}/applications`);
+        }}
+        className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
+        title="Back to Applications"
+      >
+        <X className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
+
+export function NoApplicationSelected() {
+  const navigate = useNavigate();
+  const role = localStorage.getItem("userRole") || "credit-officer";
+  const prefix = role === "manager" ? "/manager" : "/credit-officer";
+
+  return (
+    <div className="flex flex-col items-center justify-center py-24 text-center">
+      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted/50 mb-4">
+        <Building2 className="h-8 w-8 text-muted-foreground" />
+      </div>
+      <h2 className="text-lg font-semibold text-foreground mb-1">No Application Selected</h2>
+      <p className="text-sm text-muted-foreground mb-4">Please select an application to continue.</p>
+      <button
+        onClick={() => navigate(`${prefix}/applications`)}
+        className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+      >
+        Go to Applications
+      </button>
+    </div>
+  );
+}

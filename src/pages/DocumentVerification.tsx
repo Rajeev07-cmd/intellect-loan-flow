@@ -1,27 +1,13 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Upload, FileCheck, AlertTriangle, XCircle, File, Eye, Trash2, CheckCircle2, ShieldCheck, RotateCcw, Loader2 } from "lucide-react";
+import { Upload, FileCheck, AlertTriangle, XCircle, File, Trash2, CheckCircle2, ShieldCheck, RotateCcw, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RiskBadge } from "@/components/ui/risk-badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-
-const documentTypes = [
-  "Certificate of Incorporation",
-  "Company PAN",
-  "GST Registration",
-  "Memorandum of Association (MOA)",
-  "Articles of Association (AOA)",
-  "Partnership Deed",
-  "LLP Agreement",
-  "Registered Office Address Proof",
-  "Director KYC",
-];
+import { useApplicationStore } from "@/store/useApplicationStore";
+import { ActiveApplicationBanner, NoApplicationSelected } from "@/components/ActiveApplicationBanner";
 
 interface DocFile {
   id: string;
@@ -31,46 +17,6 @@ interface DocFile {
   status: "uploading" | "verified" | "pending" | "failed";
   progress: number;
 }
-
-const initialMockDocs: DocFile[] = [
-  { id: "1", name: "Certificate_of_Incorporation.pdf", type: "Certificate of Incorporation", size: "2.4 MB", status: "verified", progress: 100 },
-  { id: "2", name: "Company_PAN.pdf", type: "Company PAN", size: "1.1 MB", status: "verified", progress: 100 },
-  { id: "3", name: "GST_Registration.pdf", type: "GST Registration", size: "890 KB", status: "verified", progress: 100 },
-  { id: "4", name: "MOA_TataSteel.pdf", type: "Memorandum of Association (MOA)", size: "5.2 MB", status: "pending", progress: 100 },
-  { id: "5", name: "AOA_TataSteel.pdf", type: "Articles of Association (AOA)", size: "verified", progress: 100, status: "verified" },
-  { id: "6", name: "Director_KYC_Bundle.zip", type: "Director KYC", size: "8.1 MB", status: "failed", progress: 100 },
-];
-
-const extractedData = [
-  { field: "Company Name", value: "Tata Steel Limited", confidence: 98, source: "Certificate of Incorporation" },
-  { field: "CIN", value: "L27100MH1907PLC000260", confidence: 99, source: "Certificate of Incorporation" },
-  { field: "PAN", value: "AAACT2727Q", confidence: 97, source: "Company PAN" },
-  { field: "GSTIN", value: "27AAACT2727Q1ZV", confidence: 96, source: "GST Registration" },
-  { field: "Registered Address", value: "Bombay House, 24 Homi Mody Street, Fort, Mumbai – 400001", confidence: 94, source: "Certificate of Incorporation" },
-  { field: "Directors", value: "T.V. Narendran (MD), O.P. Bhatt (Chairman), N. Chandrasekaran", confidence: 91, source: "Director KYC" },
-  { field: "Date of Incorporation", value: "26-08-1907", confidence: 99, source: "Certificate of Incorporation" },
-  { field: "Authorized Capital", value: "₹1,030 Cr", confidence: 88, source: "MOA" },
-];
-
-const validations = [
-  { check: "PAN vs GSTIN Match", status: "pass" as const, detail: "PAN AAACT2727Q matches GSTIN prefix" },
-  { check: "CIN Format Valid", status: "pass" as const, detail: "L27100MH1907PLC000260 — valid format" },
-  { check: "Company Name Consistency", status: "pass" as const, detail: "Matches across all documents" },
-  { check: "Director Identity Match", status: "warning" as const, detail: "1 director name has slight variation across documents" },
-  { check: "GST Registration Active", status: "pass" as const, detail: "Active status confirmed" },
-  { check: "Address Consistency", status: "warning" as const, detail: "Minor address format difference in GST vs PAN" },
-  { check: "MOA Object Clause", status: "pass" as const, detail: "Lending activity covered under object clause" },
-  { check: "Director DIN Verification", status: "fail" as const, detail: "1 director DIN not found in MCA records" },
-];
-
-const alerts = [
-  { severity: "high", message: "Director DIN not found in MCA database — requires manual verification" },
-  { severity: "medium", message: "Director name variation: 'O.P. Bhatt' vs 'Om Prakash Bhatt' across documents" },
-  { severity: "medium", message: "Registered address format differs between PAN and GST registration" },
-  { severity: "low", message: "MOA authorized capital last updated in 2019 — consider requesting latest version" },
-];
-
-const integrityScore = 87;
 
 function StatusIcon({ status }: { status: string }) {
   if (status === "verified") return <FileCheck className="h-4 w-4 text-risk-low" />;
@@ -87,22 +33,21 @@ function ValidationIcon({ status }: { status: "pass" | "warning" | "fail" }) {
 }
 
 export default function DocumentVerification() {
-  const [docs, setDocs] = useState<DocFile[]>(initialMockDocs);
-  const [dragOver, setDragOver] = useState(false);
-  const [viewingDoc, setViewingDoc] = useState<DocFile | null>(null);
-  const [verifying, setVerifying] = useState(false);
+  const { selectedApplication } = useApplicationStore();
   const { toast } = useToast();
+  const [verifying, setVerifying] = useState(false);
 
-  const verified = docs.filter(d => d.status === "verified").length;
-  const pending = docs.filter(d => d.status === "pending").length;
-  const failed = docs.filter(d => d.status === "failed").length;
+  const initialDocs: DocFile[] = useMemo(() =>
+    (selectedApplication?.documents || []).map(d => ({ ...d, progress: 100 })),
+    [selectedApplication]
+  );
+
+  const [docs, setDocs] = useState<DocFile[]>(initialDocs);
 
   const handleFileDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
-    setDragOver(false);
     const files = Array.from(e.dataTransfer.files);
     if (files.length === 0) return;
-    
     const newDocs: DocFile[] = files.map((f, i) => ({
       id: `new-${Date.now()}-${i}`,
       name: f.name,
@@ -113,71 +58,50 @@ export default function DocumentVerification() {
     }));
     setDocs(prev => [...prev, ...newDocs]);
     toast({ title: "Uploading", description: `${files.length} file(s) being uploaded...` });
-    
     setTimeout(() => {
       setDocs(prev => prev.map(d => newDocs.find(nd => nd.id === d.id) ? { ...d, status: "pending" as const, progress: 100 } : d));
-      toast({ title: "Upload Complete", description: `${files.length} file(s) uploaded. Run verification to validate.` });
     }, 2000);
   }, [toast]);
 
-  const handleFileInput = useCallback(() => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.multiple = true;
-    input.accept = ".pdf,.jpg,.png";
-    input.onchange = (e) => {
-      const files = Array.from((e.target as HTMLInputElement).files || []);
-      if (files.length === 0) return;
-      const newDocs: DocFile[] = files.map((f, i) => ({
-        id: `new-${Date.now()}-${i}`,
-        name: f.name,
-        type: "Uploaded Document",
-        size: `${(f.size / (1024 * 1024)).toFixed(1)} MB`,
-        status: "uploading" as const,
-        progress: 0,
-      }));
-      setDocs(prev => [...prev, ...newDocs]);
-      toast({ title: "Uploading", description: `${files.length} file(s) being uploaded...` });
-      setTimeout(() => {
-        setDocs(prev => prev.map(d => newDocs.find(nd => nd.id === d.id) ? { ...d, status: "pending" as const, progress: 100 } : d));
-        toast({ title: "Upload Complete", description: `${files.length} file(s) uploaded successfully.` });
-      }, 2000);
-    };
-    input.click();
+  const removeDoc = useCallback((id: string) => {
+    setDocs(prev => prev.filter(d => d.id !== id));
+    toast({ title: "Removed", description: "Document removed." });
   }, [toast]);
 
-  const removeDoc = (id: string) => {
-    const doc = docs.find(d => d.id === id);
-    setDocs(prev => prev.filter(d => d.id !== id));
-    toast({ title: "Document Removed", description: `${doc?.name} has been removed.` });
-  };
-
-  const retryDoc = (id: string) => {
+  const retryDoc = useCallback((id: string) => {
     setDocs(prev => prev.map(d => d.id === id ? { ...d, status: "uploading" as const } : d));
-    toast({ title: "Retrying", description: "Re-processing document..." });
     setTimeout(() => {
       setDocs(prev => prev.map(d => d.id === id ? { ...d, status: "verified" as const } : d));
-      toast({ title: "Verified", description: "Document verification successful." });
+      toast({ title: "Verified", description: "Document verified." });
     }, 2500);
-  };
+  }, [toast]);
 
-  const runFullVerification = () => {
+  const runFullVerification = useCallback(() => {
     setVerifying(true);
     toast({ title: "Verification Started", description: "Running full document verification..." });
     setTimeout(() => {
       setDocs(prev => prev.map(d => d.status === "pending" ? { ...d, status: "verified" as const } : d));
       setVerifying(false);
-      toast({ title: "Verification Complete", description: "All pending documents have been verified." });
+      toast({ title: "Complete", description: "All pending documents verified." });
     }, 3000);
-  };
+  }, [toast]);
+
+  if (!selectedApplication) return <NoApplicationSelected />;
+
+  const verified = docs.filter(d => d.status === "verified").length;
+  const pending = docs.filter(d => d.status === "pending").length;
+  const failed = docs.filter(d => d.status === "failed").length;
+  const validations = selectedApplication.validations;
+  const integrityScore = selectedApplication.integrityScore;
 
   return (
     <div className="space-y-6 animate-slide-up">
-      {/* Header */}
+      <ActiveApplicationBanner />
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Document Verification</h1>
-          <p className="text-sm text-muted-foreground mt-1">Verify corporate compliance documents before credit analysis</p>
+          <p className="text-sm text-muted-foreground mt-1">{selectedApplication.company} — Compliance document verification</p>
         </div>
         <Button className="gap-2" onClick={runFullVerification} disabled={verifying}>
           {verifying ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
@@ -185,8 +109,7 @@ export default function DocumentVerification() {
         </Button>
       </div>
 
-      {/* Summary KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: "Total Documents", value: docs.length, icon: File, color: "text-primary" },
           { label: "Verified", value: verified, icon: FileCheck, color: "text-risk-low" },
@@ -196,9 +119,7 @@ export default function DocumentVerification() {
           <motion.div key={kpi.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
             <Card className="glass-card">
               <CardContent className="p-4 flex items-center gap-4">
-                <div className={`p-2.5 rounded-lg bg-muted/50 ${kpi.color}`}>
-                  <kpi.icon className="h-5 w-5" />
-                </div>
+                <div className={`p-2.5 rounded-lg bg-muted/50 ${kpi.color}`}><kpi.icon className="h-5 w-5" /></div>
                 <div>
                   <p className="text-2xl font-bold text-foreground">{kpi.value}</p>
                   <p className="text-xs text-muted-foreground">{kpi.label}</p>
@@ -212,12 +133,10 @@ export default function DocumentVerification() {
       <Tabs defaultValue="upload" className="space-y-4">
         <TabsList className="bg-muted/50">
           <TabsTrigger value="upload">Upload & Status</TabsTrigger>
-          <TabsTrigger value="extraction">Data Extraction</TabsTrigger>
           <TabsTrigger value="validation">Cross-Validation</TabsTrigger>
-          <TabsTrigger value="summary">Risk Summary</TabsTrigger>
+          <TabsTrigger value="summary">Integrity Score</TabsTrigger>
         </TabsList>
 
-        {/* Upload Tab */}
         <TabsContent value="upload" className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <Card className="glass-card lg:col-span-1">
@@ -226,44 +145,23 @@ export default function DocumentVerification() {
                 <CardDescription className="text-xs">Drag & drop or click to upload</CardDescription>
               </CardHeader>
               <CardContent>
-                <div
-                  onDragOver={e => { e.preventDefault(); setDragOver(true); }}
-                  onDragLeave={() => setDragOver(false)}
-                  onDrop={handleFileDrop}
-                  onClick={handleFileInput}
-                  className={`border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200 cursor-pointer ${
-                    dragOver ? "border-primary bg-primary/5" : "border-border/50 hover:border-primary/30"
-                  }`}
+                <div onDragOver={e => e.preventDefault()} onDrop={handleFileDrop}
+                  className="border-2 border-dashed rounded-xl p-8 text-center cursor-pointer border-border/50 hover:border-primary/30"
                 >
                   <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
                   <p className="text-sm text-foreground font-medium">Drop files here</p>
                   <p className="text-xs text-muted-foreground mt-1">PDF, JPG, PNG up to 20MB</p>
                 </div>
-                <div className="mt-4 space-y-2">
-                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground/60 font-medium">Accepted Documents</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {documentTypes.map(dt => (
-                      <Badge key={dt} variant="secondary" className="text-[10px] font-normal">{dt}</Badge>
-                    ))}
-                  </div>
-                </div>
               </CardContent>
             </Card>
 
             <Card className="glass-card lg:col-span-2">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm">Uploaded Documents</CardTitle>
-              </CardHeader>
+              <CardHeader className="pb-3"><CardTitle className="text-sm">Uploaded Documents</CardTitle></CardHeader>
               <CardContent>
                 <div className="space-y-2">
                   <AnimatePresence>
                     {docs.map((doc, i) => (
-                      <motion.div
-                        key={doc.id}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: 10, height: 0 }}
-                        transition={{ delay: i * 0.03 }}
+                      <motion.div key={doc.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                         className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors group"
                       >
                         <StatusIcon status={doc.status} />
@@ -271,34 +169,19 @@ export default function DocumentVerification() {
                           <p className="text-sm font-medium text-foreground truncate">{doc.name}</p>
                           <p className="text-[10px] text-muted-foreground">{doc.type} · {doc.size}</p>
                         </div>
-                        {doc.status === "uploading" && (
-                          <div className="w-24">
-                            <Progress value={doc.progress} className="h-1.5" />
-                          </div>
-                        )}
-                        <Badge
-                          variant="secondary"
-                          className={`text-[10px] ${
-                            doc.status === "verified" ? "bg-risk-low/15 text-risk-low" :
-                            doc.status === "pending" ? "bg-risk-medium/15 text-risk-medium" :
-                            doc.status === "uploading" ? "bg-primary/15 text-primary" :
-                            "bg-risk-high/15 text-risk-high"
-                          }`}
-                        >
+                        <Badge variant="secondary" className={`text-[10px] ${
+                          doc.status === "verified" ? "bg-risk-low/15 text-risk-low" :
+                          doc.status === "pending" ? "bg-risk-medium/15 text-risk-medium" :
+                          doc.status === "uploading" ? "bg-primary/15 text-primary" :
+                          "bg-risk-high/15 text-risk-high"
+                        }`}>
                           {doc.status === "verified" ? "✔ Verified" : doc.status === "pending" ? "⚠ Pending" : doc.status === "uploading" ? "⏳ Uploading" : "❌ Failed"}
                         </Badge>
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button className="p-1.5 rounded-md hover:bg-muted/50" onClick={() => setViewingDoc(doc)} title="View">
-                            <Eye className="h-3.5 w-3.5 text-muted-foreground" />
-                          </button>
                           {doc.status === "failed" && (
-                            <button className="p-1.5 rounded-md hover:bg-muted/50" onClick={() => retryDoc(doc.id)} title="Retry">
-                              <RotateCcw className="h-3.5 w-3.5 text-muted-foreground" />
-                            </button>
+                            <button className="p-1.5 rounded-md hover:bg-muted/50" onClick={() => retryDoc(doc.id)}><RotateCcw className="h-3.5 w-3.5 text-muted-foreground" /></button>
                           )}
-                          <button className="p-1.5 rounded-md hover:bg-muted/50" onClick={() => removeDoc(doc.id)} title="Delete">
-                            <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
-                          </button>
+                          <button className="p-1.5 rounded-md hover:bg-muted/50" onClick={() => removeDoc(doc.id)}><Trash2 className="h-3.5 w-3.5 text-muted-foreground" /></button>
                         </div>
                       </motion.div>
                     ))}
@@ -309,216 +192,56 @@ export default function DocumentVerification() {
           </div>
         </TabsContent>
 
-        {/* Extraction Tab */}
-        <TabsContent value="extraction" className="space-y-4">
-          <Card className="glass-card">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Extracted Document Data</CardTitle>
-              <CardDescription className="text-xs">AI-extracted fields with confidence scores</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-xs">Field</TableHead>
-                    <TableHead className="text-xs">Extracted Value</TableHead>
-                    <TableHead className="text-xs">Confidence</TableHead>
-                    <TableHead className="text-xs">Source Document</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {extractedData.map((row, i) => (
-                    <TableRow key={i}>
-                      <TableCell className="text-xs font-medium text-foreground">{row.field}</TableCell>
-                      <TableCell className="text-xs font-mono text-foreground">{row.value}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Progress value={row.confidence} className="h-1.5 w-16" />
-                          <span className="text-xs text-muted-foreground">{row.confidence}%</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{row.source}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[
-              { label: "PAN extracted from GSTIN", result: "MATCH ✔", status: "pass" },
-              { label: "CIN found in incorporation certificate", result: "MATCH ✔", status: "pass" },
-              { label: "Director name consistency", result: "MISMATCH ⚠", status: "warning" },
-            ].map((item, i) => (
-              <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-                <Card className="glass-card">
-                  <CardContent className="p-4 flex items-center gap-3">
-                    <ValidationIcon status={item.status as "pass" | "warning" | "fail"} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-muted-foreground">{item.label}</p>
-                      <p className={`text-sm font-semibold ${
-                        item.status === "pass" ? "text-risk-low" : "text-risk-medium"
-                      }`}>{item.result}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-        </TabsContent>
-
-        {/* Validation Tab */}
         <TabsContent value="validation" className="space-y-4">
           <Card className="glass-card">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Cross-Document Validation</CardTitle>
-              <CardDescription className="text-xs">Automated consistency checks across all uploaded documents</CardDescription>
+              <CardTitle className="text-sm">Cross-Validation Results</CardTitle>
+              <CardDescription className="text-xs">{selectedApplication.company}</CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-xs">Validation Check</TableHead>
-                    <TableHead className="text-xs">Status</TableHead>
-                    <TableHead className="text-xs">Detail</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {validations.map((v, i) => (
-                    <TableRow key={i}>
-                      <TableCell className="text-xs font-medium text-foreground">{v.check}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1.5">
-                          <ValidationIcon status={v.status} />
-                          <span className={`text-xs font-medium ${
-                            v.status === "pass" ? "text-risk-low" : v.status === "warning" ? "text-risk-medium" : "text-risk-high"
-                          }`}>
-                            {v.status === "pass" ? "Pass" : v.status === "warning" ? "Warning" : "Fail"}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{v.detail}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <div className="space-y-3">
+                {validations.map((v, i) => (
+                  <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
+                    className={`flex items-center gap-3 p-3 rounded-lg border ${
+                      v.status === "pass" ? "bg-risk-low/5 border-risk-low/20" :
+                      v.status === "warning" ? "bg-risk-medium/5 border-risk-medium/20" :
+                      "bg-risk-high/5 border-risk-high/20"
+                    }`}
+                  >
+                    <ValidationIcon status={v.status} />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-foreground">{v.check}</p>
+                      <p className="text-xs text-muted-foreground">{v.detail}</p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Risk Summary Tab */}
-        <TabsContent value="summary" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <Card className="glass-card lg:col-span-1">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm">Document Integrity Score</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col items-center gap-4">
-                <div className="relative h-36 w-36">
-                  <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
-                    <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--muted))" strokeWidth="8" />
-                    <circle
-                      cx="50" cy="50" r="42" fill="none"
-                      stroke={integrityScore >= 80 ? "hsl(var(--risk-low))" : integrityScore >= 50 ? "hsl(var(--risk-medium))" : "hsl(var(--risk-high))"}
-                      strokeWidth="8" strokeLinecap="round"
-                      strokeDasharray={`${integrityScore * 2.64} ${264 - integrityScore * 2.64}`}
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-3xl font-bold text-foreground">{integrityScore}</span>
-                    <span className="text-xs text-muted-foreground">/ 100</span>
-                  </div>
-                </div>
-                <RiskBadge score={100 - integrityScore} label={integrityScore >= 80 ? "Low Risk" : integrityScore >= 50 ? "Medium Risk" : "High Risk"} size="md" />
-              </CardContent>
-            </Card>
-
-            <Card className="glass-card lg:col-span-2">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm">Document Alerts</CardTitle>
-                <CardDescription className="text-xs">Issues requiring attention before proceeding</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {alerts.map((alert, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.05 }}
-                    className={`flex items-start gap-3 p-3 rounded-lg border ${
-                      alert.severity === "high" ? "bg-risk-high/5 border-risk-high/20" :
-                      alert.severity === "medium" ? "bg-risk-medium/5 border-risk-medium/20" :
-                      "bg-risk-low/5 border-risk-low/20"
-                    }`}
-                  >
-                    <div className="mt-0.5">
-                      {alert.severity === "high" ? <XCircle className="h-4 w-4 text-risk-high" /> :
-                       alert.severity === "medium" ? <AlertTriangle className="h-4 w-4 text-risk-medium" /> :
-                       <CheckCircle2 className="h-4 w-4 text-risk-low" />}
-                    </div>
-                    <div>
-                      <Badge variant="secondary" className={`text-[10px] mb-1 ${
-                        alert.severity === "high" ? "bg-risk-high/15 text-risk-high" :
-                        alert.severity === "medium" ? "bg-risk-medium/15 text-risk-medium" :
-                        "bg-risk-low/15 text-risk-low"
-                      }`}>
-                        {alert.severity.toUpperCase()}
-                      </Badge>
-                      <p className="text-xs text-foreground">{alert.message}</p>
-                    </div>
-                  </motion.div>
-                ))}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Document Viewer Placeholder */}
+        <TabsContent value="summary">
           <Card className="glass-card">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Eye className="h-4 w-4" /> Document Viewer
-              </CardTitle>
-              <CardDescription className="text-xs">View documents with highlighted extracted fields</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-64 rounded-lg bg-muted/30 border border-border/50 flex items-center justify-center">
-                <div className="text-center">
-                  <File className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />
-                  <p className="text-sm text-muted-foreground">Select a document to preview</p>
-                  <p className="text-xs text-muted-foreground/60 mt-1">CIN, PAN, GSTIN and Director names will be highlighted</p>
+            <CardContent className="p-8 text-center">
+              <div className="relative inline-block">
+                <svg className="w-40 h-40 -rotate-90">
+                  <circle cx="80" cy="80" r="65" fill="none" stroke="hsl(var(--muted))" strokeWidth="10" />
+                  <circle cx="80" cy="80" r="65" fill="none"
+                    stroke={integrityScore >= 80 ? "hsl(var(--risk-low))" : integrityScore >= 60 ? "hsl(var(--risk-medium))" : "hsl(var(--risk-high))"}
+                    strokeWidth="10" strokeLinecap="round"
+                    strokeDasharray={`${(integrityScore / 100) * 408} 408`}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className={`text-4xl font-bold ${integrityScore >= 80 ? "text-risk-low" : integrityScore >= 60 ? "text-risk-medium" : "text-risk-high"}`}>{integrityScore}</span>
+                  <span className="text-xs text-muted-foreground">Integrity Score</span>
                 </div>
               </div>
+              <p className="text-sm text-muted-foreground mt-4">Document integrity score for {selectedApplication.company}</p>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
-
-      {/* Document Viewer Dialog */}
-      <Dialog open={!!viewingDoc} onOpenChange={() => setViewingDoc(null)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-sm">{viewingDoc?.name}</DialogTitle>
-          </DialogHeader>
-          <div className="h-96 rounded-lg bg-muted/30 border border-border/50 flex items-center justify-center">
-            <div className="text-center space-y-3">
-              <File className="h-16 w-16 mx-auto text-muted-foreground/40" />
-              <div>
-                <p className="text-sm font-medium text-foreground">{viewingDoc?.name}</p>
-                <p className="text-xs text-muted-foreground">{viewingDoc?.type} · {viewingDoc?.size}</p>
-              </div>
-              <Badge variant="secondary" className={`${
-                viewingDoc?.status === "verified" ? "bg-risk-low/15 text-risk-low" :
-                viewingDoc?.status === "pending" ? "bg-risk-medium/15 text-risk-medium" :
-                "bg-risk-high/15 text-risk-high"
-              }`}>
-                Status: {viewingDoc?.status}
-              </Badge>
-              <p className="text-xs text-muted-foreground/60">Document preview with field highlighting will appear here</p>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
