@@ -49,7 +49,10 @@ export default function Login() {
 
     if (error) {
       setLoading(false);
-      toast({ title: "Login Failed", description: error.message, variant: "destructive" });
+      const description = error.message.includes("Email not confirmed")
+        ? "Please verify your email or contact administrator."
+        : error.message;
+      toast({ title: "Login Failed", description, variant: "destructive" });
       return;
     }
 
