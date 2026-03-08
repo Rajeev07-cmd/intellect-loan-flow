@@ -61,15 +61,9 @@ export function NewApplicationModal({ open, onOpenChange, onSuccess }: NewApplic
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        toast({ title: "Authentication Required", description: "Please log in to create an application.", variant: "destructive" });
-        setLoading(false);
-        return;
-      }
 
       const { error } = await supabase.from("applications").insert({
-        user_id: user.id,
+        user_id: user?.id || null,
         company_name: formData.company_name,
         cin: formData.cin || `U${Math.floor(10000 + Math.random() * 90000)}MH${new Date().getFullYear()}PLC${Math.floor(100000 + Math.random() * 900000)}`,
         sector: formData.sector,
