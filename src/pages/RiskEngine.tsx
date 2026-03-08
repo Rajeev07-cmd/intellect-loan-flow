@@ -1,8 +1,14 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { Info, Brain, TrendingUp, AlertTriangle } from "lucide-react";
+import { Info, Brain, TrendingUp, AlertTriangle, Loader2, Wifi, WifiOff } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 import { useApplicationStore } from "@/store/useApplicationStore";
 import { ActiveApplicationBanner, NoApplicationSelected } from "@/components/ActiveApplicationBanner";
+import { runRiskAnalysis, type RiskAnalysisResult } from "@/services/riskAnalysis";
+import { useApiCall } from "@/hooks/useApiCall";
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   BarChart, Bar, XAxis, YAxis, Cell, ResponsiveContainer, Tooltip as RechartsTooltip,
@@ -10,6 +16,35 @@ import {
 
 export default function RiskEngine() {
   const { selectedApplication } = useApplicationStore();
+  const { toast } = useToast();
+  const [liveResult, setLiveResult] = useState<RiskAnalysisResult | null>(null);
+
+  const { loading: analyzing, usingFallback, execute: executeRiskAnalysis } = useApiCall(
+    runRiskAnalysis,
+    {
+      onSuccess: (result) => {
+        setLiveResult(result);
+        toast({ title: "ML Model Response", description: `Risk Score: ${result.risk_score} — ${result.risk_category}` });
+      },
+      onError: () => {
+        toast({ title: "Backend Unavailable", description: "Using pre-computed mock data. Start your FastAPI server to get live predictions.", variant: "destructive" });
+      },
+    }
+  );
+
+  const handleRunModel = async () => {
+    if (!selectedApplication) return;
+    const fin = selectedApplication.financials;
+    await executeRiskAnalysis({
+      revenue_growth: 0.12,
+      profit_margin: fin.dscr > 1.5 ? 0.18 : 0.08,
+      debt_ratio: fin.debtEquity,
+      interest_coverage_ratio: fin.interestCoverage,
+      litigation_count: 1,
+      sector_risk: 0.5,
+      collateral_score: 0.7,
+    });
+  };
 
   if (!selectedApplication) return <NoApplicationSelected />;
 
@@ -36,6 +71,60 @@ export default function RiskEngine() {
         <h1 className="text-2xl font-bold text-foreground">Risk Scoring Engine</h1>
         <p className="text-sm text-muted-foreground mt-1">{selectedApplication.company} — Five Cs Analysis with Explainable AI</p>
       </div>
+
+      {/* API Status + Run Model */}
+      <div className="flex items-center gap-3">
+        {usingFallback && (
+          <Badge variant="outline" className="gap-1.5 text-xs text-risk-medium border-risk-medium/30">
+            <WifiOff className="h-3 w-3" /> Using mock data
+          </Badge>
+        )}
+        {liveResult && !usingFallback && (
+          <Badge variant="outline" className="gap-1.5 text-xs text-risk-low border-risk-low/30">
+            <Wifi className="h-3 w-3" /> Live ML prediction
+          </Badge>
+        )}
+        <Button size="sm" className="gap-2 rounded-xl" onClick={handleRunModel} disabled={analyzing}>
+          {analyzing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Brain className="h-4 w-4" />}
+          {analyzing ? "Running Model..." : "Run ML Model"}
+        </Button>
+      </div>
+
+      {/* Live result banner */}
+      {liveResult && (
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+          className="glass-card p-4 border-primary/30"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <Brain className="h-4 w-4 text-primary" />
+            <span className="text-xs font-semibold text-primary uppercase tracking-wider">Live ML Prediction</span>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <p className="text-2xl font-bold text-foreground">{liveResult.risk_score}</p>
+              <p className="text-xs text-muted-foreground">Risk Score</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-foreground">{liveResult.risk_category}</p>
+              <p className="text-xs text-muted-foreground">Category</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-foreground">{(liveResult.default_probability * 100).toFixed(0)}%</p>
+              <p className="text-xs text-muted-foreground">Default Probability</p>
+            </div>
+          </div>
+          {liveResult.explanation?.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-border/30">
+              <p className="text-xs text-muted-foreground mb-1.5">Top Risk Factors:</p>
+              <div className="flex flex-wrap gap-2">
+                {liveResult.explanation.map((e, i) => (
+                  <Badge key={i} variant="secondary" className="text-xs">{e}</Badge>
+                ))}
+              </div>
+            </div>
+          )}
+        </motion.div>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
