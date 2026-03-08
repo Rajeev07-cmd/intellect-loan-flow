@@ -132,8 +132,11 @@ export function AppLayout() {
     );
   }, [searchQuery, allSelectorApps]);
 
-  const unreadCount = notifications.filter(n => !notifRead.includes(n.id)).length;
-  const markAllRead = () => setNotifRead(notifications.map(n => n.id));
+  const unreadCount = notifs.filter(n => !n.is_read).length;
+  const markAllRead = async () => {
+    setNotifs(prev => prev.map(n => ({ ...n, is_read: true })));
+    await markAllNotificationsRead();
+  };
 
   const handleSelectApp = (app: CompanyApplication) => {
     setSelectedApplication(app);
