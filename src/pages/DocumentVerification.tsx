@@ -38,6 +38,8 @@ export default function DocumentVerification() {
   const { selectedApplication } = useApplicationStore();
   const { toast } = useToast();
   const [verifying, setVerifying] = useState(false);
+  const [apiVerification, setApiVerification] = useState<VerificationResult | null>(null);
+  const [backendAvailable, setBackendAvailable] = useState<boolean | null>(null);
 
   const initialDocs: DocFile[] = useMemo(() =>
     (selectedApplication?.documents || []).map(d => ({ ...d, progress: 100 })),
@@ -46,7 +48,7 @@ export default function DocumentVerification() {
 
   const [docs, setDocs] = useState<DocFile[]>(initialDocs);
 
-  const handleFileDrop = useCallback((e: React.DragEvent) => {
+  const handleFileDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     const files = Array.from(e.dataTransfer.files);
     if (files.length === 0) return;
@@ -60,9 +62,18 @@ export default function DocumentVerification() {
     }));
     setDocs(prev => [...prev, ...newDocs]);
     toast({ title: "Uploading", description: `${files.length} file(s) being uploaded...` });
-    setTimeout(() => {
-      setDocs(prev => prev.map(d => newDocs.find(nd => nd.id === d.id) ? { ...d, status: "pending" as const, progress: 100 } : d));
-    }, 2000);
+
+    // Try backend processing for each file
+    for (const file of files) {
+      try {
+        const result = await processDocument(file);
+        toast({ title: "AI Extraction Complete", description: `Revenue: ₹${(result.revenue / 10000000).toFixed(0)} Cr extracted from ${file.name}` });
+      } catch {
+        // Backend unavailable, fall back to local simulation
+      }
+    }
+
+    setDocs(prev => prev.map(d => newDocs.find(nd => nd.id === d.id) ? { ...d, status: "pending" as const, progress: 100 } : d));
   }, [toast]);
 
   const removeDoc = useCallback((id: string) => {
@@ -78,15 +89,27 @@ export default function DocumentVerification() {
     }, 2500);
   }, [toast]);
 
-  const runFullVerification = useCallback(() => {
+  const runFullVerification = useCallback(async () => {
     setVerifying(true);
     toast({ title: "Verification Started", description: "Running full document verification..." });
-    setTimeout(() => {
-      setDocs(prev => prev.map(d => d.status === "pending" ? { ...d, status: "verified" as const } : d));
-      setVerifying(false);
-      toast({ title: "Complete", description: "All pending documents verified." });
-    }, 3000);
-  }, [toast]);
+
+    // Try backend API first
+    if (selectedApplication) {
+      try {
+        const result = await verifyDocuments(selectedApplication.id);
+        setApiVerification(result);
+        setBackendAvailable(true);
+        toast({ title: "Backend Verified", description: `Integrity Score: ${result.document_integrity_score}` });
+      } catch {
+        setBackendAvailable(false);
+        toast({ title: "Using Local Verification", description: "Backend unavailable — using pre-computed results.", variant: "destructive" });
+      }
+    }
+
+    // Also update local doc statuses
+    setDocs(prev => prev.map(d => d.status === "pending" ? { ...d, status: "verified" as const } : d));
+    setVerifying(false);
+  }, [toast, selectedApplication]);
 
   if (!selectedApplication) return <NoApplicationSelected />;
 
