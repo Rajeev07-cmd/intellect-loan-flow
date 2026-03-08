@@ -166,10 +166,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    localStorage.removeItem(SESSION_LOGIN_TIME_KEY);
     await supabase.auth.signOut();
     setUser(null);
     setProfile(null);
     setSession(null);
+    setSessionExpired(false);
   };
 
   const resetPassword = async (email: string) => {
