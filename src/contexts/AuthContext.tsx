@@ -35,6 +35,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sessionExpired, setSessionExpired] = useState(false);
+
+  const isSessionExpired = useCallback((): boolean => {
+    const loginTime = localStorage.getItem(SESSION_LOGIN_TIME_KEY);
+    if (!loginTime) return false;
+    return Date.now() - parseInt(loginTime, 10) > SESSION_MAX_AGE_MS;
+  }, []);
+
+  const forceLogout = useCallback(async () => {
+    localStorage.removeItem(SESSION_LOGIN_TIME_KEY);
+    await supabase.auth.signOut();
+    setUser(null);
+    setProfile(null);
+    setSession(null);
+    setSessionExpired(true);
+  }, []);
 
   // Fetch user profile from database
   const fetchProfile = async (userId: string) => {
