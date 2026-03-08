@@ -341,6 +341,13 @@ export default function DocumentVerification() {
       }
     }
 
+    // Log audit event
+    const isUUID = /^[0-9a-f]{8}-/i.test(selectedApplication!.id);
+    if (isUUID) {
+      await logAuditEvent("Verification Completed", "All documents verified", selectedApplication!.id, "System");
+      await createNotification("Verification Complete", `Document verification completed for ${selectedApplication!.company}`, "info", selectedApplication!.id);
+    }
+
     setVerifying(false);
     toast({ title: "Complete", description: "All pending documents verified." });
   }, [toast, docs]);
