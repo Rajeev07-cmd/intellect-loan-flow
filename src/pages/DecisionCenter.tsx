@@ -120,7 +120,7 @@ function ManagerDecisionCenter() {
   }, [selectedApplication]);
 
   const managerReviewApps = applications.filter(
-    (a) => a.status === "Manager Review" || a.credit_officer_decision
+    (a) => a.status === "Manager Review"
   );
 
   if (viewMode === "queue" && !selectedApplication) {
