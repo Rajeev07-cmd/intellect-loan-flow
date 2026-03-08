@@ -84,6 +84,10 @@ export function AppLayout() {
   const location = useLocation();
   const { toast } = useToast();
   const { selectedApplication, setSelectedApplication } = useApplicationStore();
+  const { profile } = useAuth();
+
+  // Map user role to notification role
+  const notifRole = profile?.role === "manager" ? "manager" as const : "credit_officer" as const;
 
   // Fetch DB applications and notifications
   useEffect(() => {
