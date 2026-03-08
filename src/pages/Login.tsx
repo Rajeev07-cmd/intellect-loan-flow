@@ -1,18 +1,22 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Zap, Eye, EyeOff, ArrowRight, Loader2, Users, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
-type Role = "credit-officer" | "manager" | null;
+type RoleSelection = "credit_officer" | "manager";
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
-  const [selectedRole, setSelectedRole] = useState<Role>(null);
+  const { signIn, resetPassword, user, profile, loading: authLoading } = useAuth();
+  
+  const [selectedRole, setSelectedRole] = useState<RoleSelection | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -20,35 +24,67 @@ export default function Login() {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedRole) {
-      toast({ title: "Select Role", description: "Please select your login role.", variant: "destructive" });
-      return;
+  // Redirect if already logged in
+  useEffect(() => {
+    if (!authLoading && user && profile) {
+      const from = (location.state as any)?.from?.pathname;
+      const redirectPath = from || (profile.role === "manager" 
+        ? "/manager/dashboard" 
+        : "/credit-officer/dashboard");
+      navigate(redirectPath, { replace: true });
     }
+  }, [user, profile, authLoading, navigate, location]);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
     if (!email || !password) {
       toast({ title: "Validation Error", description: "Please enter both email and password.", variant: "destructive" });
       return;
     }
+
     setLoading(true);
-    setTimeout(() => {
+
+    const { error } = await signIn(email, password);
+
+    if (error) {
       setLoading(false);
-      localStorage.setItem("userRole", selectedRole);
-      toast({ title: "Welcome back!", description: `Signed in as ${selectedRole === "credit-officer" ? "Credit Officer" : "Manager"}` });
-      navigate(selectedRole === "credit-officer" ? "/credit-officer/dashboard" : "/manager/dashboard");
-    }, 1200);
+      toast({ title: "Login Failed", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    // Auth state listener will handle the redirect
+    toast({ title: "Welcome back!", description: "Signing you in..." });
   };
 
-  const handleForgotPassword = (e: React.FormEvent) => {
+  const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!resetEmail) {
       toast({ title: "Error", description: "Please enter your email address.", variant: "destructive" });
       return;
     }
+
+    setLoading(true);
+    const { error } = await resetPassword(resetEmail);
+    setLoading(false);
+
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+
     toast({ title: "Reset Link Sent", description: `Password reset instructions sent to ${resetEmail}` });
     setShowForgotPassword(false);
     setResetEmail("");
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex bg-background relative">
@@ -121,7 +157,8 @@ export default function Login() {
                   <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Email</label>
                   <Input type="email" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} placeholder="name@company.com" className="bg-muted/50 border-border/50 h-11 text-foreground placeholder:text-muted-foreground" />
                 </div>
-                <Button type="submit" className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
+                <Button type="submit" disabled={loading} className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
+                  {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                   Send Reset Link <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
                 <button type="button" onClick={() => setShowForgotPassword(false)} className="text-xs text-primary hover:text-primary/80 w-full text-center">
@@ -136,23 +173,23 @@ export default function Login() {
                 <p className="text-sm text-muted-foreground mt-1">Sign in to your credit appraisal workspace</p>
               </div>
 
-              {/* Role Selection */}
+              {/* Role Selection - informational only */}
               <div className="space-y-2">
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Login As</label>
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Your Role</label>
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() => setSelectedRole("credit-officer")}
+                    onClick={() => setSelectedRole("credit_officer")}
                     className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                      selectedRole === "credit-officer"
+                      selectedRole === "credit_officer"
                         ? "border-primary bg-primary/10 shadow-md"
                         : "border-border/50 hover:border-primary/30 hover:bg-muted/50"
                     }`}
                   >
-                    <div className={`p-2.5 rounded-lg ${selectedRole === "credit-officer" ? "bg-primary/20" : "bg-muted/50"}`}>
-                      <Briefcase className={`h-5 w-5 ${selectedRole === "credit-officer" ? "text-primary" : "text-muted-foreground"}`} />
+                    <div className={`p-2.5 rounded-lg ${selectedRole === "credit_officer" ? "bg-primary/20" : "bg-muted/50"}`}>
+                      <Briefcase className={`h-5 w-5 ${selectedRole === "credit_officer" ? "text-primary" : "text-muted-foreground"}`} />
                     </div>
-                    <span className={`text-sm font-semibold ${selectedRole === "credit-officer" ? "text-primary" : "text-foreground"}`}>Credit Officer</span>
+                    <span className={`text-sm font-semibold ${selectedRole === "credit_officer" ? "text-primary" : "text-foreground"}`}>Credit Officer</span>
                     <span className="text-[10px] text-muted-foreground">Loan Processing</span>
                   </button>
                   <button
@@ -171,6 +208,7 @@ export default function Login() {
                     <span className="text-[10px] text-muted-foreground">Decision & Oversight</span>
                   </button>
                 </div>
+                <p className="text-[10px] text-muted-foreground text-center mt-1">Your dashboard will be based on your registered role</p>
               </div>
 
               <form onSubmit={handleLogin} className="space-y-5">
@@ -195,6 +233,15 @@ export default function Login() {
                   {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Signing In...</> : <>Sign In <ArrowRight className="ml-2 h-4 w-4" /></>}
                 </Button>
               </form>
+
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground">
+                  Don't have an account?{" "}
+                  <Link to="/signup" className="text-primary hover:text-primary/80 font-medium">
+                    Sign Up
+                  </Link>
+                </p>
+              </div>
             </>
           )}
 
