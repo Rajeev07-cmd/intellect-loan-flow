@@ -8,7 +8,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 const navItems = [
   { label: "Home", href: "#home" },
   { label: "Workflow", href: "#workflow" },
-  { label: "About", href: "#social-proof" },
+  { label: "Technology", href: "#technology" },
   { label: "Contact", href: "#contact" },
 ];
 
