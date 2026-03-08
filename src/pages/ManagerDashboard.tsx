@@ -191,7 +191,7 @@ export default function ManagerDashboard() {
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
             <XAxis type="number" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} axisLine={false} tickLine={false} />
             <YAxis dataKey="name" type="category" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} axisLine={false} tickLine={false} width={110} />
-            <Tooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--popover-foreground))", fontSize: 12 }} />
+            <RechartsTooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--popover-foreground))", fontSize: 12 }} />
             <Bar dataKey="value" radius={[0, 4, 4, 0]}>
               {sectorExposure.map((entry, i) => (
                 <Cell key={i} fill={entry.fill} />
