@@ -134,7 +134,7 @@ export default function DecisionCenter() {
 
   const handleSubmitDecision = async () => {
     if (!decision) {
-      toast({ title: "Select a Decision", description: "Please choose Approve, Conditional, Reject, or Re-Review.", variant: "destructive" });
+      toast({ title: "Select a Decision", description: "Please choose Approve, Reject, or Re-Review.", variant: "destructive" });
       return;
     }
     if (selectedReasons.length === 0) {
@@ -143,31 +143,26 @@ export default function DecisionCenter() {
     }
     setSubmitting(true);
 
-    const decisionLabels: Record<string, string> = {
-      approve: "Approved", conditional: "Conditional Approval", reject: "Rejected", "re-review": "Sent for Re-Review"
+    const mgrDecisionMap: Record<string, ManagerDecision> = {
+      approve: "approve", reject: "reject", conditional: "review", "re-review": "review"
     };
-    const decisionLabel = decisionLabels[decision] || decision;
+    const mgrDecision = mgrDecisionMap[decision] || "review";
 
-    // Update database
     const isUUID = /^[0-9a-f]{8}-/i.test(app.id);
     if (isUUID) {
-      const newStatus = decision === "approve" ? "Approved" : decision === "reject" ? "Rejected" : decision === "conditional" ? "Manager Review" : "Manager Review";
       try {
+        await submitManagerDecision(app.id, mgrDecision, app.company);
+
+        // Also update loan terms
         await supabase.from("applications").update({
-          status: newStatus,
-          recommendation: decisionLabel,
           suggested_limit: `₹${approvedAmount} Cr`,
           interest_rate: `${interestRate}%`,
+          recommendation: decision === "approve" ? "Approved" : decision === "reject" ? "Rejected" : "Under Review",
         }).eq("id", app.id);
 
-        await updateWorkflowStatus(app.id, newStatus as any);
-        await logAuditEvent("Manager Decision", `Decision: ${decisionLabel} — ₹${approvedAmount} Cr at ${interestRate}%`, app.id, "Credit Manager");
-        await createNotification(
-          `Decision: ${decisionLabel}`,
-          `${app.company} — ₹${approvedAmount} Cr at ${interestRate}%`,
-          decision === "reject" ? "error" : decision === "approve" ? "info" : "warning",
-          app.id
-        );
+        // Refresh decision state
+        const ds = await getDecisionState(app.id);
+        setDecisionState(ds);
       } catch (e) {
         console.error("Error saving decision:", e);
       }
