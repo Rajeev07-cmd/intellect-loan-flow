@@ -70,7 +70,7 @@ export function SocialProofSection() {
               transition={{ delay: 0.2 + i * 0.1 }}
               className="text-center p-4"
             >
-              <p className="text-2xl md:text-3xl font-bold text-foreground">{m.value}</p>
+              <AnimatedValue value={m.value} className="text-2xl md:text-3xl font-bold text-foreground" />
               <p className="text-xs text-muted-foreground mt-1">{m.label}</p>
             </motion.div>
           ))}
