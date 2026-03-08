@@ -305,6 +305,7 @@ export function AppLayout() {
             <Outlet />
           </main>
         </div>
+        <AICopilot />
       </div>
     </SidebarProvider>
   );
