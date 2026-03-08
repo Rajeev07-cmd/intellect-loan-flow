@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, Play, Shield, TrendingUp, BarChart3, FileCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AnimatedValue } from "@/components/ui/animated-value";
 
 const stats = [
   { value: "12,847", label: "Applications Processed" },
