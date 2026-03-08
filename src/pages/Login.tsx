@@ -8,7 +8,6 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
-type RoleSelection = "credit_officer" | "manager";
 
 export default function Login() {
   const navigate = useNavigate();
