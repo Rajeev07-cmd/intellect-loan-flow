@@ -21,6 +21,8 @@ export default function CamGenerator() {
   const { selectedApplication } = useApplicationStore();
   const [exporting, setExporting] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState("overview");
+  const [saving, setSaving] = useState(false);
+  const [savedToDb, setSavedToDb] = useState(false);
 
   if (!selectedApplication) return <NoApplicationSelected />;
 
