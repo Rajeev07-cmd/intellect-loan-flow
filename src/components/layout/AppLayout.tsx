@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
-import { Bell, Search, X, Menu, Home, FileText, Shield, BookOpen, Gavel, Brain, LogOut, Building2, ChevronDown } from "lucide-react";
+import { Bell, Search, X, Menu, Home, FileText, Shield, BookOpen, Gavel, Brain, Building2, ChevronDown } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -30,9 +30,6 @@ export function AppLayout() {
   const { toast } = useToast();
   const { selectedApplication, setSelectedApplication } = useApplicationStore();
 
-  const role = localStorage.getItem("userRole") || "credit-officer";
-  const prefix = role === "manager" ? "/manager" : "/credit-officer";
-
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
     const q = searchQuery.toLowerCase();
@@ -48,22 +45,13 @@ export function AppLayout() {
   const markAllRead = () => setNotifRead(notifications.map(n => n.id));
 
   const navMenuItems = [
-    { label: "Dashboard", icon: Home, url: `${prefix}/dashboard` },
-    { label: "Applications", icon: FileText, url: `${prefix}/applications` },
-    { label: "Risk Engine", icon: Shield, url: `${prefix}/risk-engine` },
-    { label: "AI Research", icon: Brain, url: `${prefix}/research` },
-    ...(role === "credit-officer" ? [
-      { label: "CAM Generator", icon: BookOpen, url: `${prefix}/cam-generator` },
-    ] : [
-      { label: "Decision Center", icon: Gavel, url: `${prefix}/decision-center` },
-    ]),
+    { label: "Dashboard", icon: Home, url: "/dashboard" },
+    { label: "Applications", icon: FileText, url: "/applications" },
+    { label: "Risk Engine", icon: Shield, url: "/risk-engine" },
+    { label: "CAM Generator", icon: BookOpen, url: "/cam-generator" },
+    { label: "Decision Center", icon: Gavel, url: "/decision-center" },
+    { label: "AI Research", icon: Brain, url: "/research" },
   ];
-
-  const handleLogout = () => {
-    localStorage.removeItem("userRole");
-    toast({ title: "Signed Out", description: "Logged out successfully." });
-    navigate("/login");
-  };
 
   const handleSelectApp = (app: typeof companyApplications[0]) => {
     setSelectedApplication(app);
@@ -103,7 +91,7 @@ export function AppLayout() {
                       <button
                         key={app.id}
                         className="w-full text-left px-3 py-2.5 hover:bg-muted/50 transition-colors border-b border-border/30 last:border-0"
-                        onMouseDown={() => { setSearchQuery(""); navigate(`${prefix}/applications`); }}
+                        onMouseDown={() => { setSearchQuery(""); navigate("/applications"); }}
                       >
                         <p className="text-xs font-medium text-foreground">{app.company}</p>
                         <p className="text-[10px] text-muted-foreground">{app.id} • {app.sector} • ₹{app.loanAmount} Cr</p>
@@ -236,11 +224,6 @@ export function AppLayout() {
                         {item.label}
                       </button>
                     ))}
-                    <div className="border-t border-border/50 my-3" />
-                    <button onClick={handleLogout} className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50">
-                      <LogOut className="h-4 w-4" />
-                      Sign Out
-                    </button>
                   </div>
                 </SheetContent>
               </Sheet>
