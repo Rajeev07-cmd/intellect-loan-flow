@@ -35,9 +35,9 @@ const ALLOWED_TYPES = [
 
 function getFileIcon(fileName: string) {
   const ext = fileName.split('.').pop()?.toLowerCase();
-  if (ext === 'pdf') return <FileText className="h-4 w-4 text-red-400" />;
-  if (['png', 'jpg', 'jpeg'].includes(ext || '')) return <Image className="h-4 w-4 text-blue-400" />;
-  if (ext === 'docx') return <FileType className="h-4 w-4 text-indigo-400" />;
+  if (ext === 'pdf') return <FileText className="h-4 w-4 text-risk-high" />;
+  if (['png', 'jpg', 'jpeg'].includes(ext || '')) return <Image className="h-4 w-4 text-primary" />;
+  if (ext === 'docx') return <FileType className="h-4 w-4 text-accent-foreground" />;
   return <File className="h-4 w-4 text-muted-foreground" />;
 }
 
