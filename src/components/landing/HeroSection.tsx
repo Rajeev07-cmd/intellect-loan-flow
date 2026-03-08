@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, Play, Shield, TrendingUp, BarChart3, FileCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AnimatedValue } from "@/components/ui/animated-value";
 
 const stats = [
   { value: "12,847", label: "Applications Processed" },
@@ -103,7 +104,7 @@ export function HeroSection() {
               whileHover={{ y: -4, scale: 1.03 }}
               className="glass-card p-6 text-center cursor-default"
             >
-              <p className="text-2xl md:text-3xl font-bold text-foreground">{s.value}</p>
+              <AnimatedValue value={s.value} className="text-2xl md:text-3xl font-bold text-foreground" />
               <p className="text-xs text-muted-foreground mt-1.5">{s.label}</p>
             </motion.div>
           ))}
