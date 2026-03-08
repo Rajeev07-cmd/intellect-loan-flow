@@ -174,6 +174,63 @@ export type Database = {
           },
         ]
       }
+      document_extracted_fields: {
+        Row: {
+          application_id: string
+          confidence_score: number | null
+          coordinates: Json | null
+          created_at: string
+          document_id: string
+          field_name: string
+          field_value: string | null
+          id: string
+          is_manually_verified: boolean | null
+          page_number: number | null
+          updated_at: string
+        }
+        Insert: {
+          application_id: string
+          confidence_score?: number | null
+          coordinates?: Json | null
+          created_at?: string
+          document_id: string
+          field_name: string
+          field_value?: string | null
+          id?: string
+          is_manually_verified?: boolean | null
+          page_number?: number | null
+          updated_at?: string
+        }
+        Update: {
+          application_id?: string
+          confidence_score?: number | null
+          coordinates?: Json | null
+          created_at?: string
+          document_id?: string
+          field_name?: string
+          field_value?: string | null
+          id?: string
+          is_manually_verified?: boolean | null
+          page_number?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_extracted_fields_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_extracted_fields_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
           application_id: string
