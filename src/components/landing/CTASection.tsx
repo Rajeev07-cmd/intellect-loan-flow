@@ -33,7 +33,7 @@ export function CTASection() {
         <h2 className="text-3xl md:text-5xl font-bold leading-tight">
           Transform Corporate Credit
           <br />
-          <span className="text-gradient">Evaluation with AI</span>
+          <span className="text-gradient">Decisioning with AI</span>
         </h2>
 
         <p className="text-muted-foreground mt-5 text-base max-w-lg mx-auto">
