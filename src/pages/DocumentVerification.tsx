@@ -341,7 +341,7 @@ export default function DocumentVerification() {
                           <button onClick={() => removeDoc(doc.id)} className="p-1 rounded-md hover:bg-risk-high/10 text-muted-foreground hover:text-risk-high"><Trash2 className="h-3.5 w-3.5" /></button>
                         </div>
                       </motion.div>
-                    )))}
+                    ))}
                   </AnimatePresence>
                 </div>
               </CardContent>
