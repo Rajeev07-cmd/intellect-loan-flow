@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, FileText, FileCheck, Shield, BookOpen, GitBranch,
-  Brain, Gavel, Users, LogOut, Zap,
+  Brain, Gavel, Users, LogOut, Zap, Loader2,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -9,6 +9,7 @@ import {
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarFooter, SidebarHeader, useSidebar,
 } from "@/components/ui/sidebar";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function AppSidebar() {
   const { state } = useSidebar();
@@ -16,12 +17,17 @@ export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { profile, signOut, loading } = useAuth();
+  
   const isActive = (path: string) => location.pathname === path;
 
-  const role = localStorage.getItem("userRole") || "credit-officer";
+  // Determine role from profile or fallback to URL pattern
+  const role = profile?.role || 
+    (location.pathname.startsWith("/manager") ? "manager" : "credit_officer");
+  
   const prefix = role === "manager" ? "/manager" : "/credit-officer";
 
-  const mainItems = role === "credit-officer" ? [
+  const mainItems = role === "credit_officer" || role === "admin" ? [
     { title: "Dashboard", url: `${prefix}/dashboard`, icon: LayoutDashboard },
     { title: "Applications", url: `${prefix}/applications`, icon: FileText },
     { title: "Doc Verification", url: `${prefix}/document-verification`, icon: FileCheck },
@@ -40,19 +46,21 @@ export function AppSidebar() {
     { title: "AI Research", url: `${prefix}/research`, icon: Brain },
   ];
 
-  const adminItems = role === "manager" ? [
+  const adminItems = role === "manager" || role === "admin" ? [
     { title: "User Management", url: `${prefix}/admin/users`, icon: Users },
   ] : [];
 
-  const handleLogout = () => {
-    localStorage.removeItem("userRole");
+  const handleLogout = async () => {
+    await signOut();
     toast({ title: "Signed Out", description: "You have been logged out successfully." });
     navigate("/login");
   };
 
-  const userName = role === "manager" ? "Amit Desai" : "Rajesh Kumar";
-  const userRole = role === "manager" ? "Senior Manager" : "Credit Officer";
-  const initials = userName.split(" ").map(n => n[0]).join("");
+  // User display info
+  const userName = profile?.full_name || "User";
+  const userRoleDisplay = role === "manager" ? "Senior Manager" : 
+                          role === "admin" ? "Administrator" : "Credit Officer";
+  const initials = userName.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
 
   return (
     <Sidebar collapsible="icon" className="border-r border-border/30">
@@ -131,10 +139,12 @@ export function AppSidebar() {
       <SidebarFooter className="p-3">
         {!collapsed && (
           <div className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/20 border border-border/20">
-            <div className="h-8 w-8 rounded-full bg-primary/15 flex items-center justify-center text-xs font-semibold text-primary">{initials}</div>
+            <div className="h-8 w-8 rounded-full bg-primary/15 flex items-center justify-center text-xs font-semibold text-primary">
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : initials}
+            </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-foreground truncate">{userName}</p>
-              <p className="text-[10px] text-muted-foreground">{userRole}</p>
+              <p className="text-[10px] text-muted-foreground">{userRoleDisplay}</p>
             </div>
             <button onClick={handleLogout} title="Sign Out">
               <LogOut className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground cursor-pointer transition-colors" />
