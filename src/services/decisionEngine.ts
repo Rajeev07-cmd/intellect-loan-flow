@@ -73,7 +73,9 @@ export async function submitCreditOfficerDecision(
     "Credit Officer Decision Submitted",
     `${companyName} — Credit Officer recommends: ${label}. Awaiting your review.`,
     decision === "reject" ? "error" : decision === "conditional" ? "warning" : "info",
-    applicationId
+    applicationId,
+    "manager",
+    "application_submitted"
   );
 }
 
