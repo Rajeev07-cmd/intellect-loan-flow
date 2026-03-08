@@ -10,7 +10,7 @@ const navItems = [
   { label: "Platform", href: "#features" },
   { label: "AI Engine", href: "#architecture" },
   { label: "Features", href: "#risk-engine" },
-  { label: "Solutions", href: "#cam" },
+  { label: "Developers", href: "#developers" },
   { label: "Contact", href: "#contact" },
 ];
 
