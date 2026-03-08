@@ -1,15 +1,18 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Zap, Eye, EyeOff, ArrowRight, Loader2 } from "lucide-react";
+import { Zap, Eye, EyeOff, ArrowRight, Loader2, Users, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useToast } from "@/hooks/use-toast";
 
+type Role = "credit-officer" | "manager" | null;
+
 export default function Login() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [selectedRole, setSelectedRole] = useState<Role>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,6 +22,10 @@ export default function Login() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedRole) {
+      toast({ title: "Select Role", description: "Please select your login role.", variant: "destructive" });
+      return;
+    }
     if (!email || !password) {
       toast({ title: "Validation Error", description: "Please enter both email and password.", variant: "destructive" });
       return;
@@ -26,8 +33,9 @@ export default function Login() {
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
-      toast({ title: "Welcome back!", description: `Signed in as ${email}` });
-      navigate("/dashboard");
+      localStorage.setItem("userRole", selectedRole);
+      toast({ title: "Welcome back!", description: `Signed in as ${selectedRole === "credit-officer" ? "Credit Officer" : "Manager"}` });
+      navigate(selectedRole === "credit-officer" ? "/credit-officer/dashboard" : "/manager/dashboard");
     }, 1200);
   };
 
@@ -52,7 +60,7 @@ export default function Login() {
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-primary/5" />
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-primary/10 rounded-full blur-3xl" />
-        
+
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-2">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 border border-primary/20">
@@ -60,7 +68,7 @@ export default function Login() {
             </div>
             <span className="text-xl font-bold text-foreground">Intelli-Credit</span>
           </div>
-          <p className="text-sm text-muted-foreground">Next-Gen Corporate Credit Appraisal Platform</p>
+          <p className="text-sm text-muted-foreground">AI-Powered Corporate Credit Decisioning Platform</p>
         </div>
 
         <div className="relative z-10 space-y-8">
@@ -70,7 +78,7 @@ export default function Login() {
               <span className="text-gradient">Decisioning Engine</span>
             </h2>
             <p className="mt-4 text-muted-foreground max-w-md leading-relaxed">
-              Automate comprehensive credit appraisal memos with explainable AI. 
+              Automate comprehensive credit appraisal memos with explainable AI.
               From data ingestion to final recommendation — in minutes, not weeks.
             </p>
           </motion.div>
@@ -111,13 +119,7 @@ export default function Login() {
               <form onSubmit={handleForgotPassword} className="space-y-5">
                 <div className="space-y-2">
                   <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Email</label>
-                  <Input
-                    type="email"
-                    value={resetEmail}
-                    onChange={(e) => setResetEmail(e.target.value)}
-                    placeholder="name@company.com"
-                    className="bg-muted/50 border-border/50 h-11 text-foreground placeholder:text-muted-foreground"
-                  />
+                  <Input type="email" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} placeholder="name@company.com" className="bg-muted/50 border-border/50 h-11 text-foreground placeholder:text-muted-foreground" />
                 </div>
                 <Button type="submit" className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
                   Send Reset Link <ArrowRight className="ml-2 h-4 w-4" />
@@ -134,16 +136,47 @@ export default function Login() {
                 <p className="text-sm text-muted-foreground mt-1">Sign in to your credit appraisal workspace</p>
               </div>
 
+              {/* Role Selection */}
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Login As</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRole("credit-officer")}
+                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                      selectedRole === "credit-officer"
+                        ? "border-primary bg-primary/10 shadow-md"
+                        : "border-border/50 hover:border-primary/30 hover:bg-muted/50"
+                    }`}
+                  >
+                    <div className={`p-2.5 rounded-lg ${selectedRole === "credit-officer" ? "bg-primary/20" : "bg-muted/50"}`}>
+                      <Briefcase className={`h-5 w-5 ${selectedRole === "credit-officer" ? "text-primary" : "text-muted-foreground"}`} />
+                    </div>
+                    <span className={`text-sm font-semibold ${selectedRole === "credit-officer" ? "text-primary" : "text-foreground"}`}>Credit Officer</span>
+                    <span className="text-[10px] text-muted-foreground">Loan Processing</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRole("manager")}
+                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                      selectedRole === "manager"
+                        ? "border-primary bg-primary/10 shadow-md"
+                        : "border-border/50 hover:border-primary/30 hover:bg-muted/50"
+                    }`}
+                  >
+                    <div className={`p-2.5 rounded-lg ${selectedRole === "manager" ? "bg-primary/20" : "bg-muted/50"}`}>
+                      <Users className={`h-5 w-5 ${selectedRole === "manager" ? "text-primary" : "text-muted-foreground"}`} />
+                    </div>
+                    <span className={`text-sm font-semibold ${selectedRole === "manager" ? "text-primary" : "text-foreground"}`}>Manager</span>
+                    <span className="text-[10px] text-muted-foreground">Decision & Oversight</span>
+                  </button>
+                </div>
+              </div>
+
               <form onSubmit={handleLogin} className="space-y-5">
                 <div className="space-y-2">
                   <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Email</label>
-                  <Input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@company.com"
-                    className="bg-muted/50 border-border/50 h-11 text-foreground placeholder:text-muted-foreground"
-                  />
+                  <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@company.com" className="bg-muted/50 border-border/50 h-11 text-foreground placeholder:text-muted-foreground" />
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -151,13 +184,7 @@ export default function Login() {
                     <button type="button" onClick={() => setShowForgotPassword(true)} className="text-xs text-primary hover:text-primary/80">Forgot password?</button>
                   </div>
                   <div className="relative">
-                    <Input
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="bg-muted/50 border-border/50 h-11 pr-10 text-foreground placeholder:text-muted-foreground"
-                    />
+                    <Input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="bg-muted/50 border-border/50 h-11 pr-10 text-foreground placeholder:text-muted-foreground" />
                     <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
