@@ -47,7 +47,7 @@ export default function DecisionCenter() {
   const [interestRate, setInterestRate] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [comments, setComments] = useState<{ user: string; role: string; time: string; text: string }[]>([]);
+  const [comments, setComments] = useState<{ user: string; role: string; time: string; text: string; author?: string }[]>([]);
   const [auditTrail, setAuditTrail] = useState<{ time: string; event: string; user: string }[]>([]);
   const { toast } = useToast();
 
