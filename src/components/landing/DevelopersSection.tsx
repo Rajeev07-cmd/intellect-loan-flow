@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Github, Linkedin } from "lucide-react";
+import { Linkedin } from "lucide-react";
 
 const developers = [
   {
@@ -8,6 +8,7 @@ const developers = [
     description: "Architecting the end-to-end platform from data pipelines to decision dashboards.",
     initials: "RP",
     color: "from-primary/30 to-chart-4/30",
+    linkedin: "https://www.linkedin.com/in/rajeev-pichika-8b58a8309",
   },
   {
     name: "Tarun Kumar Choudhury",
@@ -15,6 +16,7 @@ const developers = [
     description: "Building credit risk models, explainable AI modules, and backend infrastructure.",
     initials: "TC",
     color: "from-chart-4/30 to-chart-2/30",
+    linkedin: "https://www.linkedin.com/in/tarunkumarchoudhury",
   },
   {
     name: "Sudeepa Mund",
@@ -22,6 +24,7 @@ const developers = [
     description: "Crafting responsive, high-performance interfaces for credit officers and managers.",
     initials: "SM",
     color: "from-chart-2/30 to-primary/30",
+    linkedin: "https://www.linkedin.com/in/sudeepa-mund",
   },
   {
     name: "Subhankar Rath",
@@ -29,6 +32,7 @@ const developers = [
     description: "Designing intuitive workflows and enterprise-grade visual experiences.",
     initials: "SR",
     color: "from-primary/30 to-chart-1/30",
+    linkedin: "https://www.linkedin.com/in/subhankar-rath-2a369b274",
   },
 ];
 
@@ -51,7 +55,7 @@ export function DevelopersSection() {
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {developers.map((dev, i) => (
             <motion.div
               key={dev.name}
@@ -62,7 +66,6 @@ export function DevelopersSection() {
               whileHover={{ y: -6, scale: 1.02 }}
               className="glass-card p-6 flex flex-col items-center text-center cursor-default"
             >
-              {/* Avatar */}
               <div
                 className={`w-20 h-20 rounded-full bg-gradient-to-br ${dev.color} border-2 border-border/50 flex items-center justify-center mb-4 shadow-lg`}
               >
@@ -75,23 +78,16 @@ export function DevelopersSection() {
                 {dev.description}
               </p>
 
-              {/* Social icons */}
-              <div className="flex gap-3 mt-4">
-                <motion.a
-                  href="#"
-                  whileHover={{ scale: 1.15 }}
-                  className="p-2 rounded-lg bg-muted/50 hover:bg-primary/10 transition-colors"
-                >
-                  <Github className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
-                </motion.a>
-                <motion.a
-                  href="#"
-                  whileHover={{ scale: 1.15 }}
-                  className="p-2 rounded-lg bg-muted/50 hover:bg-primary/10 transition-colors"
-                >
-                  <Linkedin className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
-                </motion.a>
-              </div>
+              <motion.a
+                href={dev.linkedin}
+                target="_blank"
+                rel="noopener noreferrer"
+                whileHover={{ scale: 1.1 }}
+                className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/20 border border-primary/20 transition-colors"
+              >
+                <Linkedin className="h-4 w-4 text-primary" />
+                <span className="text-xs font-medium text-primary">LinkedIn Profile</span>
+              </motion.a>
             </motion.div>
           ))}
         </div>
