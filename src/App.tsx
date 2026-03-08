@@ -57,7 +57,6 @@ const App = () => (
                   <Route path="/cam-generator" element={<CamGenerator />} />
                   <Route path="/tracking" element={<Tracking />} />
                   <Route path="/research" element={<AIResearch />} />
-                  <Route path="/decision-center" element={<DecisionCenter />} />
                 </Route>
               </Route>
 
@@ -65,6 +64,12 @@ const App = () => (
               <Route element={<ProtectedRoute allowedRoles={["manager", "admin"]} />}>
                 <Route element={<AppLayout />}>
                   <Route path="/manager-dashboard" element={<ManagerDashboard />} />
+                </Route>
+              </Route>
+
+              {/* Shared routes (both roles) */}
+              <Route element={<ProtectedRoute allowedRoles={["credit_officer", "manager", "admin"]} />}>
+                <Route element={<AppLayout />}>
                   <Route path="/decision-center" element={<DecisionCenter />} />
                 </Route>
               </Route>
