@@ -20,7 +20,7 @@ export default function Tracking() {
   const handleAddComment = () => {
     if (!newComment.trim()) return;
     setComments(prev => [
-      { author: "Rajesh Kumar", role: "Credit Manager", time: "Just now", text: newComment },
+      { author: "Credit Officer", role: "Analyst", time: "Just now", text: newComment },
       ...prev,
     ]);
     setNewComment("");
