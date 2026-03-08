@@ -275,6 +275,8 @@ export type Database = {
           description: string
           id: string
           is_read: boolean
+          notification_type: string | null
+          role: string | null
           severity: string
           title: string
         }
@@ -284,6 +286,8 @@ export type Database = {
           description: string
           id?: string
           is_read?: boolean
+          notification_type?: string | null
+          role?: string | null
           severity?: string
           title: string
         }
@@ -293,6 +297,8 @@ export type Database = {
           description?: string
           id?: string
           is_read?: boolean
+          notification_type?: string | null
+          role?: string | null
           severity?: string
           title?: string
         }
