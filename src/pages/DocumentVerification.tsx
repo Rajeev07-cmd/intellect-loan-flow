@@ -128,10 +128,22 @@ export default function DocumentVerification() {
           <h1 className="text-2xl font-bold text-foreground">Document Verification</h1>
           <p className="text-sm text-muted-foreground mt-1">{selectedApplication.company} — Compliance document verification</p>
         </div>
-        <Button className="gap-2" onClick={runFullVerification} disabled={verifying}>
-          {verifying ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
-          {verifying ? "Verifying..." : "Run Full Verification"}
-        </Button>
+        <div className="flex items-center gap-2">
+          {backendAvailable === true && (
+            <Badge variant="outline" className="gap-1.5 text-xs text-risk-low border-risk-low/30">
+              <Wifi className="h-3 w-3" /> Backend connected
+            </Badge>
+          )}
+          {backendAvailable === false && (
+            <Badge variant="outline" className="gap-1.5 text-xs text-risk-medium border-risk-medium/30">
+              <WifiOff className="h-3 w-3" /> Using mock data
+            </Badge>
+          )}
+          <Button className="gap-2" onClick={runFullVerification} disabled={verifying}>
+            {verifying ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+            {verifying ? "Verifying..." : "Run Full Verification"}
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
