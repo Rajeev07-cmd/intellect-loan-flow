@@ -15,7 +15,6 @@ export default function Login() {
   const { toast } = useToast();
   const { signIn, resetPassword, user, profile, loading: authLoading, sessionExpired } = useAuth();
   
-  const [selectedRole, setSelectedRole] = useState<RoleSelection | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
