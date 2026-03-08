@@ -1,8 +1,14 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { Info, Brain, TrendingUp, AlertTriangle } from "lucide-react";
+import { Info, Brain, TrendingUp, AlertTriangle, Loader2, Wifi, WifiOff } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 import { useApplicationStore } from "@/store/useApplicationStore";
 import { ActiveApplicationBanner, NoApplicationSelected } from "@/components/ActiveApplicationBanner";
+import { runRiskAnalysis, type RiskAnalysisResult } from "@/services/riskAnalysis";
+import { useApiCall } from "@/hooks/useApiCall";
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   BarChart, Bar, XAxis, YAxis, Cell, ResponsiveContainer, Tooltip as RechartsTooltip,
@@ -10,6 +16,35 @@ import {
 
 export default function RiskEngine() {
   const { selectedApplication } = useApplicationStore();
+  const { toast } = useToast();
+  const [liveResult, setLiveResult] = useState<RiskAnalysisResult | null>(null);
+
+  const { loading: analyzing, usingFallback, execute: executeRiskAnalysis } = useApiCall(
+    runRiskAnalysis,
+    {
+      onSuccess: (result) => {
+        setLiveResult(result);
+        toast({ title: "ML Model Response", description: `Risk Score: ${result.risk_score} — ${result.risk_category}` });
+      },
+      onError: () => {
+        toast({ title: "Backend Unavailable", description: "Using pre-computed mock data. Start your FastAPI server to get live predictions.", variant: "destructive" });
+      },
+    }
+  );
+
+  const handleRunModel = async () => {
+    if (!selectedApplication) return;
+    const fin = selectedApplication.financials;
+    await executeRiskAnalysis({
+      revenue_growth: 0.12,
+      profit_margin: fin.dscr > 1.5 ? 0.18 : 0.08,
+      debt_ratio: fin.debtEquity,
+      interest_coverage_ratio: fin.interestCoverage,
+      litigation_count: 1,
+      sector_risk: 0.5,
+      collateral_score: 0.7,
+    });
+  };
 
   if (!selectedApplication) return <NoApplicationSelected />;
 
