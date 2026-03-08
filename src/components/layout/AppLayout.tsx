@@ -227,34 +227,6 @@ export function AppLayout() {
               </DropdownMenu>
               <div className="h-5 w-px bg-border/50" />
 
-              {/* Hamburger */}
-              <Sheet>
-                <SheetTrigger asChild>
-                  <button className="p-2 rounded-xl hover:bg-muted/50 transition-colors">
-                    <Menu className="h-4 w-4 text-muted-foreground" />
-                  </button>
-                </SheetTrigger>
-                <SheetContent side="right" className="w-72">
-                  <SheetHeader>
-                    <SheetTitle className="text-sm">Navigation</SheetTitle>
-                  </SheetHeader>
-                  <div className="mt-4 space-y-1">
-                    {navMenuItems.map((item) => (
-                      <button
-                        key={item.label}
-                        onClick={() => navigate(item.url)}
-                        className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm transition-colors ${
-                          location.pathname === item.url ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                        }`}
-                      >
-                        <item.icon className="h-4 w-4" />
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
-                </SheetContent>
-              </Sheet>
-
               <span className="text-[10px] text-muted-foreground hidden md:block font-mono">v2.1.0</span>
             </div>
           </header>
