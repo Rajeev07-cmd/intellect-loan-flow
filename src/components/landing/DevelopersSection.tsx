@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Github, Linkedin } from "lucide-react";
+import { Linkedin } from "lucide-react";
 
 const developers = [
   {
