@@ -134,10 +134,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [isSessionExpired, forceLogout]);
 
   const signIn = async (email: string, password: string) => {
+    setSessionExpired(false);
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+    if (!error) {
+      localStorage.setItem(SESSION_LOGIN_TIME_KEY, Date.now().toString());
+    }
     return { error: error as Error | null };
   };
 
