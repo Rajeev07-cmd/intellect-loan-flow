@@ -294,6 +294,45 @@ export default function DecisionCenter() {
             </CardContent>
           </Card>
 
+          {/* Credit Officer Decision Status */}
+          <Card className={`border-2 ${
+            decisionState.credit_officer_decision === "approve" ? "border-risk-low/30 bg-risk-low/5" :
+            decisionState.credit_officer_decision === "reject" ? "border-risk-high/30 bg-risk-high/5" :
+            decisionState.credit_officer_decision === "conditional" ? "border-risk-medium/30 bg-risk-medium/5" :
+            "border-border/50"
+          }`}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <User className="h-4 w-4 text-primary" /> Credit Officer Recommendation
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {decisionState.credit_officer_decision ? (
+                <div className="text-center py-2">
+                  <Badge className={`text-sm px-4 py-1.5 ${
+                    decisionState.credit_officer_decision === "approve" ? "bg-risk-low/15 text-risk-low border-risk-low/30" :
+                    decisionState.credit_officer_decision === "reject" ? "bg-risk-high/15 text-risk-high border-risk-high/30" :
+                    "bg-risk-medium/15 text-risk-medium border-risk-medium/30"
+                  }`} variant="outline">
+                    {decisionState.credit_officer_decision === "approve" ? "✓ Approve" :
+                     decisionState.credit_officer_decision === "reject" ? "✗ Reject" : "⚠ Conditional"}
+                  </Badge>
+                  {decisionState.final_status && (
+                    <div className="mt-3 p-2 rounded-lg bg-muted/30 border border-border/30">
+                      <p className="text-[10px] text-muted-foreground">Final Status</p>
+                      <p className="text-xs font-bold text-foreground">{decisionState.final_status}</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-3">
+                  <Clock className="h-5 w-5 text-muted-foreground mx-auto mb-1" />
+                  <p className="text-xs text-muted-foreground">Awaiting Credit Officer decision</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <Card className="border-border/50">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold">Approval Workflow</CardTitle>
