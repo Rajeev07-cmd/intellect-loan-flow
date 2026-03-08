@@ -11,13 +11,13 @@ import { useApplicationStore, type CompanyApplication } from "@/store/useApplica
 import { useToast } from "@/hooks/use-toast";
 import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
+import { getNotifications, markNotificationRead, markAllNotificationsRead, subscribeToNotifications, type Notification } from "@/services/notifications";
 
-const notifications = [
-  { id: 1, title: "High Risk Alert", desc: "Adani Ports & SEZ flagged — Risk Score 72", time: "5 min ago", read: false },
-  { id: 2, title: "CAM Report Ready", desc: "Tata Steel Ltd CAM v2.1 generated", time: "1 hour ago", read: false },
-  { id: 3, title: "Committee Decision Pending", desc: "ABC Industries awaiting approval", time: "2 hours ago", read: true },
-  { id: 4, title: "Document Verification", desc: "Director KYC verification failed", time: "3 hours ago", read: false },
-  { id: 5, title: "New Application", desc: "JSW Steel Ltd — ₹450 Cr term loan", time: "5 hours ago", read: true },
+// Fallback mock notifications
+const mockNotifications = [
+  { id: "mock-1", application_id: null, title: "High Risk Alert", description: "Adani Ports & SEZ flagged — Risk Score 72", severity: "error", is_read: false, created_at: new Date(Date.now() - 5 * 60000).toISOString() },
+  { id: "mock-2", application_id: null, title: "CAM Report Ready", description: "Tata Steel Ltd CAM v2.1 generated", severity: "info", is_read: false, created_at: new Date(Date.now() - 60 * 60000).toISOString() },
+  { id: "mock-3", application_id: null, title: "Committee Decision Pending", description: "ABC Industries awaiting approval", severity: "warning", is_read: true, created_at: new Date(Date.now() - 2 * 3600000).toISOString() },
 ];
 
 function mapDbToSelectorApp(db: any): CompanyApplication {
