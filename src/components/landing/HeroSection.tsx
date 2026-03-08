@@ -65,7 +65,7 @@ export function HeroSection() {
           </h1>
 
           <p className="mt-6 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Automating corporate loan risk assessment, document verification, and credit appraisal memo generation using explainable AI.
+            Enterprise platform for automating corporate credit evaluation, document verification, and loan appraisal workflows.
           </p>
         </motion.div>
 

@@ -48,10 +48,10 @@ export function CTASection() {
           className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4"
         >
           <Button size="lg" onClick={() => navigate("/login")} className="gap-2 px-8 h-12 text-base">
-            Get Started <ArrowRight className="h-4 w-4" />
+            Login <ArrowRight className="h-4 w-4" />
           </Button>
           <Button size="lg" variant="outline" onClick={() => navigate("/login")} className="h-12 text-base">
-            Login
+            Register
           </Button>
         </motion.div>
       </motion.div>
