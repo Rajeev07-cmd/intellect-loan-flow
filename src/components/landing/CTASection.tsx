@@ -33,7 +33,7 @@ export function CTASection() {
         <h2 className="text-3xl md:text-5xl font-bold leading-tight">
           Transform Corporate Credit
           <br />
-          <span className="text-gradient">Evaluation with AI</span>
+          <span className="text-gradient">Decisioning with AI</span>
         </h2>
 
         <p className="text-muted-foreground mt-5 text-base max-w-lg mx-auto">
@@ -48,10 +48,10 @@ export function CTASection() {
           className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4"
         >
           <Button size="lg" onClick={() => navigate("/login")} className="gap-2 px-8 h-12 text-base">
-            Get Started <ArrowRight className="h-4 w-4" />
+            Login <ArrowRight className="h-4 w-4" />
           </Button>
           <Button size="lg" variant="outline" onClick={() => navigate("/login")} className="h-12 text-base">
-            Login
+            Register
           </Button>
         </motion.div>
       </motion.div>
