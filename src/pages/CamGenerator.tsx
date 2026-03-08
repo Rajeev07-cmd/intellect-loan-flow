@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { FileDown, Share2, Download, Loader2, CheckCircle, XCircle, AlertTriangle, FileText, Shield, Building2, BarChart3, Gavel } from "lucide-react";
+import { FileDown, Share2, Download, Loader2, CheckCircle, XCircle, AlertTriangle, FileText, Shield, Building2, BarChart3, Gavel, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useApplicationStore } from "@/store/useApplicationStore";
 import { ActiveApplicationBanner, NoApplicationSelected } from "@/components/ActiveApplicationBanner";
-
+import { saveCamReport, getCamReport } from "@/services/camReports";
+import { logAuditEvent } from "@/services/auditLog";
 const outlineItems = [
   { id: "overview", label: "Company Overview", icon: Building2 },
   { id: "financial", label: "Financial Analysis", icon: BarChart3 },
