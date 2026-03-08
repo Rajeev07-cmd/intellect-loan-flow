@@ -10,7 +10,7 @@ import { useApplicationStore, type CompanyApplication } from "@/store/useApplica
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { NewApplicationModal } from "@/components/applications/NewApplicationModal";
+import { NewApplicationWizard } from "@/components/applications/NewApplicationWizard";
 
 interface DbApplication {
   id: string;
