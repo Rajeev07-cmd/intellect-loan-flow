@@ -4,6 +4,7 @@ import { WorkflowSection } from "@/components/landing/WorkflowSection";
 import { ProductOverviewSection } from "@/components/landing/ProductOverviewSection";
 import { AIAssistantSection } from "@/components/landing/AIAssistantSection";
 import { CTASection } from "@/components/landing/CTASection";
+import { DevelopersSection } from "@/components/landing/DevelopersSection";
 import { Footer } from "@/components/landing/Footer";
 
 export default function Index() {
@@ -14,6 +15,7 @@ export default function Index() {
       <WorkflowSection />
       <ProductOverviewSection />
       <AIAssistantSection />
+      <DevelopersSection />
       <CTASection />
       <Footer />
     </div>
