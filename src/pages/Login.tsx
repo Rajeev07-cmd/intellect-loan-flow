@@ -14,7 +14,7 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const { signIn, resetPassword, user, profile, loading: authLoading } = useAuth();
+  const { signIn, resetPassword, user, profile, loading: authLoading, sessionExpired } = useAuth();
   
   const [selectedRole, setSelectedRole] = useState<RoleSelection | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -175,6 +175,15 @@ export default function Login() {
                 <h1 className="text-2xl font-bold text-foreground">Welcome back</h1>
                 <p className="text-sm text-muted-foreground mt-1">Sign in to your credit appraisal workspace</p>
               </div>
+
+              {sessionExpired && (
+                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+                  className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive flex items-center gap-2"
+                >
+                  <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  Your session has expired. Please log in again.
+                </motion.div>
+              )}
 
               {/* Role Selection - informational only */}
               <div className="space-y-2">
