@@ -168,16 +168,21 @@ export default function DecisionCenter() {
       }
     }
 
+    const decisionLabels: Record<string, string> = {
+      approve: "Approved", reject: "Rejected", conditional: "Under Review", "re-review": "Sent for Re-Review"
+    };
+    const decisionLabel = decisionLabels[decision] || decision;
+
     // Update local audit trail
     const timeStr = new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
     setAuditTrail(prev => [
-      { time: timeStr, event: `Committee decision: ${decisionLabel} — ₹${approvedAmount} Cr at ${interestRate}%`, user: "Credit Manager" },
+      { time: timeStr, event: `Manager decision: ${decisionLabel} — ₹${approvedAmount} Cr at ${interestRate}%`, user: "Credit Manager" },
       ...prev,
     ]);
 
     setSubmitting(false);
     setSubmitted(true);
-    toast({ title: "Decision Submitted", description: `Final decision: ${decisionLabel}. Loan amount: ₹${approvedAmount} Cr.` });
+    toast({ title: "Decision Submitted", description: `Final decision: ${decisionState.final_status || decisionLabel}. Loan amount: ₹${approvedAmount} Cr.` });
   };
 
   const handleSendComment = () => {
