@@ -159,7 +159,7 @@ export default function ManagerDashboard() {
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis dataKey="month" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--popover-foreground))", fontSize: 12 }} />
+              <RechartsTooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--popover-foreground))", fontSize: 12 }} />
               <Bar dataKey="approved" fill="hsl(var(--risk-low))" radius={[4, 4, 0, 0]} />
               <Bar dataKey="rejected" fill="hsl(var(--risk-high))" radius={[4, 4, 0, 0]} />
               <Bar dataKey="pending" fill="hsl(var(--risk-medium))" radius={[4, 4, 0, 0]} />
