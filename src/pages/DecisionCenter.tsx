@@ -1171,56 +1171,128 @@ function ApplicationSummaryCard({ app }: { app: any }) {
 }
 
 function CAMSummaryCard({ app }: { app: any }) {
+  const [camData, setCamData] = useState<any>(null);
+  const [loadingCam, setLoadingCam] = useState(false);
+
+  useEffect(() => {
+    const isUUID = /^[0-9a-f]{8}-/i.test(app.id);
+    if (!isUUID) return;
+    setLoadingCam(true);
+    supabase
+      .from("cam_reports")
+      .select("*")
+      .eq("application_id", app.id)
+      .order("created_at", { ascending: false })
+      .maybeSingle()
+      .then(({ data }) => { setCamData(data); setLoadingCam(false); })
+      .catch(() => setLoadingCam(false));
+  }, [app.id]);
+
   return (
     <Card className="border-border/50">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm font-semibold">CAM Summary</CardTitle>
-        <CardDescription className="text-xs">Credit Appraisal Memo highlights</CardDescription>
+        <CardDescription className="text-xs">
+          {camData ? "From saved Credit Appraisal Memo" : "Credit Appraisal Memo highlights"}
+        </CardDescription>
       </CardHeader>
       <CardContent>
-        <Accordion type="multiple" defaultValue={["financials", "fivec"]}>
-          <AccordionItem value="financials">
-            <AccordionTrigger className="text-xs font-semibold py-2">Financial Highlights</AccordionTrigger>
-            <AccordionContent>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  ["Revenue", app.financials?.revenue || "—"],
-                  ["Outstanding Debt", app.financials?.outstandingDebt || "—"],
-                  ["DSCR", app.financials?.dscr ? `${app.financials.dscr}x` : "—"],
-                  ["Debt/Equity", app.financials?.debtEquity ? `${app.financials.debtEquity}x` : "—"],
-                  ["Interest Coverage", app.financials?.interestCoverage ? `${app.financials.interestCoverage}x` : "—"],
-                  ["Current Ratio", app.financials?.currentRatio ? `${app.financials.currentRatio}x` : "—"],
-                ].map(([label, value], i) => (
-                  <div key={i} className="p-2.5 rounded-lg bg-muted/30 border border-border/50">
-                    <p className="text-[10px] text-muted-foreground">{label}</p>
-                    <p className="text-sm font-bold text-foreground">{value}</p>
-                  </div>
-                ))}
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-          <AccordionItem value="fivec">
-            <AccordionTrigger className="text-xs font-semibold py-2">Five Cs Evaluation</AccordionTrigger>
-            <AccordionContent>
-              <div className="space-y-2">
-                {(app.fiveCsScores || []).map((c: any) => (
-                  <div key={c.name} className="flex items-center justify-between p-2 bg-muted/20 rounded-lg">
-                    <span className="text-xs font-medium text-foreground">{c.name}</span>
-                    <div className="flex items-center gap-3">
-                      <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden">
-                        <div className={`h-full rounded-full ${c.score >= 70 ? "bg-risk-low" : c.score >= 50 ? "bg-risk-medium" : "bg-risk-high"}`} style={{ width: `${c.score}%` }} />
-                      </div>
-                      <span className="text-xs font-bold text-foreground w-6 text-right">{c.score}</span>
+        {loadingCam ? (
+          <div className="flex items-center justify-center py-6">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : camData ? (
+          <Accordion type="multiple" defaultValue={["overview", "financials", "risk", "recommendation"]}>
+            {camData.company_overview && (
+              <AccordionItem value="overview">
+                <AccordionTrigger className="text-xs font-semibold py-2">Company Overview</AccordionTrigger>
+                <AccordionContent>
+                  <p className="text-xs text-muted-foreground whitespace-pre-line">{camData.company_overview}</p>
+                </AccordionContent>
+              </AccordionItem>
+            )}
+            {camData.financial_analysis && (
+              <AccordionItem value="financials">
+                <AccordionTrigger className="text-xs font-semibold py-2">Financial Analysis</AccordionTrigger>
+                <AccordionContent>
+                  <p className="text-xs text-muted-foreground whitespace-pre-line">{camData.financial_analysis}</p>
+                </AccordionContent>
+              </AccordionItem>
+            )}
+            {camData.risk_analysis && (
+              <AccordionItem value="risk">
+                <AccordionTrigger className="text-xs font-semibold py-2">Risk Analysis</AccordionTrigger>
+                <AccordionContent>
+                  <p className="text-xs text-muted-foreground whitespace-pre-line">{camData.risk_analysis}</p>
+                </AccordionContent>
+              </AccordionItem>
+            )}
+            <AccordionItem value="recommendation">
+              <AccordionTrigger className="text-xs font-semibold py-2">Loan Recommendation</AccordionTrigger>
+              <AccordionContent>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    ["Recommendation", camData.recommendation || "—"],
+                    ["Suggested Limit", camData.suggested_loan_limit || "—"],
+                    ["Interest Rate", camData.interest_rate || "—"],
+                  ].map(([label, value], i) => (
+                    <div key={i} className="p-2.5 rounded-lg bg-muted/30 border border-border/50">
+                      <p className="text-[10px] text-muted-foreground">{label}</p>
+                      <p className="text-sm font-bold text-foreground">{value}</p>
                     </div>
-                  </div>
-                ))}
-                {(!app.fiveCsScores || app.fiveCsScores.length === 0) && (
-                  <p className="text-xs text-muted-foreground text-center py-3">No evaluation data</p>
-                )}
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
+                  ))}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        ) : (
+          <Accordion type="multiple" defaultValue={["financials", "fivec"]}>
+            <AccordionItem value="financials">
+              <AccordionTrigger className="text-xs font-semibold py-2">Financial Highlights</AccordionTrigger>
+              <AccordionContent>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    ["Revenue", app.financials?.revenue || "—"],
+                    ["Outstanding Debt", app.financials?.outstandingDebt || "—"],
+                    ["DSCR", app.financials?.dscr ? `${app.financials.dscr}x` : "—"],
+                    ["Debt/Equity", app.financials?.debtEquity ? `${app.financials.debtEquity}x` : "—"],
+                    ["Interest Coverage", app.financials?.interestCoverage ? `${app.financials.interestCoverage}x` : "—"],
+                    ["Current Ratio", app.financials?.currentRatio ? `${app.financials.currentRatio}x` : "—"],
+                  ].map(([label, value], i) => (
+                    <div key={i} className="p-2.5 rounded-lg bg-muted/30 border border-border/50">
+                      <p className="text-[10px] text-muted-foreground">{label}</p>
+                      <p className="text-sm font-bold text-foreground">{value}</p>
+                    </div>
+                  ))}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="fivec">
+              <AccordionTrigger className="text-xs font-semibold py-2">Five Cs Evaluation</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-2">
+                  {(app.fiveCsScores || []).map((c: any) => (
+                    <div key={c.name} className="flex items-center justify-between p-2 bg-muted/20 rounded-lg">
+                      <span className="text-xs font-medium text-foreground">{c.name}</span>
+                      <div className="flex items-center gap-3">
+                        <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full ${c.score >= 70 ? "bg-risk-low" : c.score >= 50 ? "bg-risk-medium" : "bg-risk-high"}`} style={{ width: `${c.score}%` }} />
+                        </div>
+                        <span className="text-xs font-bold text-foreground w-6 text-right">{c.score}</span>
+                      </div>
+                    </div>
+                  ))}
+                  {(!app.fiveCsScores || app.fiveCsScores.length === 0) && (
+                    <p className="text-xs text-muted-foreground text-center py-3">No evaluation data</p>
+                  )}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+            <div className="mt-3 p-3 rounded-lg bg-risk-medium/10 border border-risk-medium/20 text-center">
+              <p className="text-[10px] text-risk-medium font-medium">⚠ No CAM report saved yet. Generate one from the CAM Generator page.</p>
+            </div>
+          </Accordion>
+        )}
       </CardContent>
     </Card>
   );
