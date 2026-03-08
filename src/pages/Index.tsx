@@ -2,6 +2,7 @@ import { Navbar } from "@/components/landing/Navbar";
 import { HeroSection } from "@/components/landing/HeroSection";
 import { WorkflowSection } from "@/components/landing/WorkflowSection";
 import { RiskVisualization } from "@/components/landing/RiskVisualization";
+import { AIAssistantSection } from "@/components/landing/AIAssistantSection";
 import { CTASection } from "@/components/landing/CTASection";
 import { Footer } from "@/components/landing/Footer";
 
@@ -12,6 +13,7 @@ export default function Index() {
       <HeroSection />
       <WorkflowSection />
       <RiskVisualization />
+      <AIAssistantSection />
       <CTASection />
       <Footer />
     </div>
