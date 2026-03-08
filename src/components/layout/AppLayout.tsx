@@ -268,20 +268,26 @@ export function AppLayout() {
                     )}
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  {notifications.map(n => (
-                    <DropdownMenuItem
-                      key={n.id}
-                      className={`flex flex-col items-start gap-0.5 py-2.5 cursor-pointer ${!notifRead.includes(n.id) ? "bg-primary/5" : ""}`}
-                      onClick={() => setNotifRead(prev => prev.includes(n.id) ? prev : [...prev, n.id])}
-                    >
-                      <div className="flex items-center gap-2 w-full">
-                        {!notifRead.includes(n.id) && <div className="h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />}
-                        <span className="text-xs font-medium text-foreground">{n.title}</span>
-                        <span className="text-[9px] text-muted-foreground ml-auto">{n.time}</span>
-                      </div>
-                      <span className="text-[10px] text-muted-foreground ml-3.5">{n.desc}</span>
-                    </DropdownMenuItem>
-                  ))}
+                  {notifs.map(n => {
+                    const timeAgo = getTimeAgo(n.created_at);
+                    return (
+                      <DropdownMenuItem
+                        key={n.id}
+                        className={`flex flex-col items-start gap-0.5 py-2.5 cursor-pointer ${!n.is_read ? "bg-primary/5" : ""}`}
+                        onClick={async () => {
+                          setNotifs(prev => prev.map(x => x.id === n.id ? { ...x, is_read: true } : x));
+                          await markNotificationRead(n.id);
+                        }}
+                      >
+                        <div className="flex items-center gap-2 w-full">
+                          {!n.is_read && <div className="h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />}
+                          <span className="text-xs font-medium text-foreground">{n.title}</span>
+                          <span className="text-[9px] text-muted-foreground ml-auto">{timeAgo}</span>
+                        </div>
+                        <span className="text-[10px] text-muted-foreground ml-3.5">{n.description}</span>
+                      </DropdownMenuItem>
+                    );
+                  })}
                 </DropdownMenuContent>
               </DropdownMenu>
               <div className="h-5 w-px bg-border/50" />
