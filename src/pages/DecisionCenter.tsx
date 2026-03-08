@@ -2,9 +2,9 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Building2, IndianRupee, Factory, Shield, Brain, ChevronRight,
-  CheckCircle2, Clock, AlertTriangle, XCircle, Send, Paperclip,
+  CheckCircle2, Clock, AlertTriangle, XCircle, Send,
   ThumbsUp, ThumbsDown, RotateCcw, FileCheck, User, MessageSquare, Loader2,
-  Gavel, Eye, BellRing,
+  Gavel, Eye, Activity, TrendingDown, Scale, Zap, ArrowLeft,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,13 +19,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { RiskBadge } from "@/components/ui/risk-badge";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useApplicationStore } from "@/store/useApplicationStore";
 import { ActiveApplicationBanner, NoApplicationSelected } from "@/components/ActiveApplicationBanner";
 import { CreditOfficerDecisionPanel } from "@/components/decisions/CreditOfficerDecisionPanel";
-import { logAuditEvent } from "@/services/auditLog";
-import { createNotification } from "@/services/notifications";
-import { updateWorkflowStatus } from "@/services/workflowStatus";
 import { supabase } from "@/integrations/supabase/client";
 import { getDecisionState, submitManagerDecision, type ManagerDecision, type DecisionState } from "@/services/decisionEngine";
 import { useAuth } from "@/contexts/AuthContext";
@@ -43,15 +44,14 @@ const decisionReasons = [
   "High debt-equity ratio",
 ];
 
+// ─── Root ────────────────────────────────────────────────────────
 export default function DecisionCenter() {
   const { profile } = useAuth();
   const userRole = profile?.role || "credit_officer";
 
-  // For managers: show review queue if no app selected
   if (userRole === "manager" || userRole === "admin") {
     return <ManagerDecisionCenter />;
   }
-
   return <CreditOfficerDecisionCenter />;
 }
 
@@ -68,13 +68,11 @@ function CreditOfficerDecisionCenter() {
   }, [selectedApplication]);
 
   if (!selectedApplication) return <NoApplicationSelected />;
-
   const app = selectedApplication;
 
   return (
     <div className="space-y-6">
       <ActiveApplicationBanner />
-
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center justify-between">
           <div>
@@ -83,20 +81,14 @@ function CreditOfficerDecisionCenter() {
           </div>
         </div>
       </motion.div>
-
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-        {/* Left — App Summary */}
         <motion.div className="xl:col-span-4 space-y-4" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
           <ApplicationSummaryCard app={app} />
           <DecisionTimeline decisionState={decisionState} />
         </motion.div>
-
-        {/* Center — CAM Summary */}
         <motion.div className="xl:col-span-4 space-y-4" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <CAMSummaryCard app={app} />
         </motion.div>
-
-        {/* Right — CO Decision Panel */}
         <motion.div className="xl:col-span-4 space-y-4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}>
           <CreditOfficerDecisionPanel />
         </motion.div>
@@ -112,9 +104,7 @@ function ManagerDecisionCenter() {
   const [managerReviewApps, setManagerReviewApps] = useState<any[]>([]);
 
   useEffect(() => {
-    if (selectedApplication) {
-      setViewMode("review");
-    }
+    if (selectedApplication) setViewMode("review");
   }, [selectedApplication]);
 
   useEffect(() => {
@@ -127,7 +117,6 @@ function ManagerDecisionCenter() {
       setManagerReviewApps(data || []);
     };
     fetchApps();
-
     const channel = supabase
       .channel("manager_review_queue")
       .on("postgres_changes", { event: "*", schema: "public", table: "applications" }, () => fetchApps())
@@ -138,11 +127,65 @@ function ManagerDecisionCenter() {
   if (viewMode === "queue" && !selectedApplication) {
     return <ManagerReviewQueue applications={managerReviewApps} onSwitchToReview={() => setViewMode("review")} />;
   }
-
   return <ManagerReviewPanel onBackToQueue={() => setViewMode("queue")} />;
 }
 
-// ─── Manager Review Queue ────────────────────────────────────────
+// ─── Risk Gauge SVG ──────────────────────────────────────────────
+function RiskGauge({ score, size = 140 }: { score: number; size?: number }) {
+  const clampedScore = Math.max(0, Math.min(100, score));
+  const startAngle = -135;
+  const endAngle = 135;
+  const totalAngle = endAngle - startAngle;
+  const needleAngle = startAngle + (clampedScore / 100) * totalAngle;
+  const r = size / 2 - 12;
+  const cx = size / 2;
+  const cy = size / 2 + 8;
+
+  const polarToCartesian = (angle: number) => {
+    const rad = (angle * Math.PI) / 180;
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+  };
+
+  const arcPath = (start: number, end: number) => {
+    const s = polarToCartesian(start);
+    const e = polarToCartesian(end);
+    const largeArc = end - start > 180 ? 1 : 0;
+    return `M ${s.x} ${s.y} A ${r} ${r} 0 ${largeArc} 1 ${e.x} ${e.y}`;
+  };
+
+  const needleEnd = polarToCartesian(needleAngle);
+  const color = clampedScore <= 40 ? "hsl(var(--risk-low))" : clampedScore <= 65 ? "hsl(var(--risk-medium))" : "hsl(var(--risk-high))";
+  const label = clampedScore <= 40 ? "Low Risk" : clampedScore <= 65 ? "Medium Risk" : "High Risk";
+
+  return (
+    <div className="flex flex-col items-center">
+      <svg width={size} height={size * 0.7} viewBox={`0 0 ${size} ${size * 0.75}`}>
+        {/* Background arc */}
+        <path d={arcPath(startAngle, -45)} fill="none" stroke="hsl(var(--risk-low))" strokeWidth="8" strokeLinecap="round" opacity="0.25" />
+        <path d={arcPath(-45, 45)} fill="none" stroke="hsl(var(--risk-medium))" strokeWidth="8" strokeLinecap="round" opacity="0.25" />
+        <path d={arcPath(45, endAngle)} fill="none" stroke="hsl(var(--risk-high))" strokeWidth="8" strokeLinecap="round" opacity="0.25" />
+        {/* Active arc */}
+        <path d={arcPath(startAngle, needleAngle)} fill="none" stroke={color} strokeWidth="8" strokeLinecap="round" />
+        {/* Needle */}
+        <line x1={cx} y1={cy} x2={needleEnd.x} y2={needleEnd.y} stroke={color} strokeWidth="2.5" strokeLinecap="round" />
+        <circle cx={cx} cy={cy} r="4" fill={color} />
+        {/* Score text */}
+        <text x={cx} y={cy - 16} textAnchor="middle" fontSize="22" fontWeight="800" fill={color}>{clampedScore}</text>
+        {/* Labels */}
+        <text x={cx - r + 6} y={cy + 20} textAnchor="start" fontSize="8" fill="hsl(var(--muted-foreground))">Low</text>
+        <text x={cx} y={cy + 20} textAnchor="middle" fontSize="8" fill="hsl(var(--muted-foreground))">Med</text>
+        <text x={cx + r - 6} y={cy + 20} textAnchor="end" fontSize="8" fill="hsl(var(--muted-foreground))">High</text>
+      </svg>
+      <Badge variant="outline" className={`text-[10px] mt-1 ${
+        clampedScore <= 40 ? "border-risk-low/30 text-risk-low bg-risk-low/10" :
+        clampedScore <= 65 ? "border-risk-medium/30 text-risk-medium bg-risk-medium/10" :
+        "border-risk-high/30 text-risk-high bg-risk-high/10"
+      }`}>{label}</Badge>
+    </div>
+  );
+}
+
+// ─── Manager Review Queue (enhanced with risk highlights) ────────
 function ManagerReviewQueue({
   applications,
   onSwitchToReview,
@@ -151,39 +194,19 @@ function ManagerReviewQueue({
   onSwitchToReview: () => void;
 }) {
   const { setSelectedApplication } = useApplicationStore();
-  const { toast } = useToast();
 
   const handleReview = async (app: typeof applications[0]) => {
-    // Build a CompanyApplication object from the DB row
     const mapped = {
-      id: app.id,
-      company: app.company_name,
-      cin: "",
-      sector: app.sector,
+      id: app.id, company: app.company_name, cin: "", sector: app.sector,
       loanAmount: Number(app.loan_amount),
       riskScore: app.risk_score ?? 50,
       riskCategory: (app.risk_score ?? 50) <= 40 ? "Low" as const : (app.risk_score ?? 50) <= 65 ? "Medium" as const : "High" as const,
-      status: app.status,
-      defaultProbability: 0,
-      recommendation: "Under Review",
+      status: app.status, defaultProbability: 0, recommendation: "Under Review",
       financials: { revenue: "—", outstandingDebt: "—", dscr: 0, debtEquity: 0, relatedPartyTransactions: "—", gstMismatch: false, gstMismatchAmount: "—", interestCoverage: 0, currentRatio: 0 },
-      fiveCsScores: [],
-      documents: [],
-      validations: [],
-      integrityScore: 0,
-      researchFindings: [],
-      explainableAI: [],
-      pipeline: [],
-      comments: [],
+      fiveCsScores: [], documents: [], validations: [], integrityScore: 0,
+      researchFindings: [], explainableAI: [], pipeline: [], comments: [],
     };
-
-    // Fetch full details
-    const { data: fullApp } = await supabase
-      .from("applications")
-      .select("*")
-      .eq("id", app.id)
-      .maybeSingle();
-
+    const { data: fullApp } = await supabase.from("applications").select("*").eq("id", app.id).maybeSingle();
     if (fullApp) {
       mapped.cin = fullApp.cin || "";
       mapped.recommendation = fullApp.recommendation || "Under Review";
@@ -191,83 +214,129 @@ function ManagerReviewQueue({
       mapped.riskCategory = (fullApp.risk_score ?? 50) <= 40 ? "Low" : (fullApp.risk_score ?? 50) <= 65 ? "Medium" : "High";
       mapped.defaultProbability = fullApp.default_probability ? Number(fullApp.default_probability) : 0;
     }
-
     setSelectedApplication(mapped);
     onSwitchToReview();
   };
 
-  const coDecisionLabel = (d: string | null) => {
-    if (!d) return "—";
-    if (d === "approve") return "Approve";
-    if (d === "conditional") return "Conditional";
-    if (d === "reject") return "Reject";
-    return d;
+  const coDecisionLabel = (d: string | null) => d === "approve" ? "Approve" : d === "conditional" ? "Conditional" : d === "reject" ? "Reject" : "—";
+  const coDecisionColor = (d: string | null) =>
+    d === "approve" ? "border-risk-low/30 text-risk-low bg-risk-low/10" :
+    d === "conditional" ? "border-risk-medium/30 text-risk-medium bg-risk-medium/10" :
+    d === "reject" ? "border-risk-high/30 text-risk-high bg-risk-high/10" :
+    "border-border text-muted-foreground";
+
+  const riskPriorityLabel = (score: number | null) => {
+    const s = score ?? 50;
+    if (s > 65) return { label: "Immediate Review", icon: "🔴", color: "bg-risk-high/8 border-l-4 border-l-risk-high" };
+    if (s > 40) return { label: "Pending Decision", icon: "🟡", color: "bg-risk-medium/8 border-l-4 border-l-risk-medium" };
+    return { label: "Ready for Approval", icon: "🟢", color: "bg-risk-low/8 border-l-4 border-l-risk-low" };
   };
 
-  const coDecisionColor = (d: string | null) => {
-    if (d === "approve") return "border-risk-low/30 text-risk-low bg-risk-low/10";
-    if (d === "conditional") return "border-risk-medium/30 text-risk-medium bg-risk-medium/10";
-    if (d === "reject") return "border-risk-high/30 text-risk-high bg-risk-high/10";
-    return "border-border text-muted-foreground";
-  };
+  // Sort: high risk first
+  const sorted = [...applications].sort((a, b) => (b.risk_score ?? 50) - (a.risk_score ?? 50));
 
   return (
     <div className="space-y-6">
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground tracking-tight">Manager — Decision Center</h1>
-            <p className="text-sm text-muted-foreground mt-1">Applications awaiting your review and final decision</p>
+            <h1 className="text-2xl font-bold text-foreground tracking-tight flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Gavel className="h-5 w-5 text-primary" />
+              </div>
+              Manager Decision Center
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1 ml-[52px]">Corporate Credit Approval Console — Applications awaiting final decision</p>
           </div>
-          <Badge variant="outline" className="gap-1.5 px-3 py-1.5 text-xs border-risk-medium/30 text-risk-medium bg-risk-medium/10">
-            <Gavel className="h-3.5 w-3.5" />
-            {applications.length} Pending
-          </Badge>
+          <div className="flex items-center gap-3">
+            <Badge variant="outline" className="gap-1.5 px-3 py-1.5 text-xs border-risk-high/30 text-risk-high bg-risk-high/10">
+              {sorted.filter(a => (a.risk_score ?? 50) > 65).length} High Risk
+            </Badge>
+            <Badge variant="outline" className="gap-1.5 px-3 py-1.5 text-xs border-primary/30 text-primary bg-primary/10">
+              <Activity className="h-3 w-3" />
+              {applications.length} Pending
+            </Badge>
+          </div>
         </div>
+      </motion.div>
+
+      {/* KPI Strip */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          { label: "Total Pending", value: applications.length, icon: Clock, color: "text-primary" },
+          { label: "High Risk", value: sorted.filter(a => (a.risk_score ?? 50) > 65).length, icon: AlertTriangle, color: "text-risk-high" },
+          { label: "Medium Risk", value: sorted.filter(a => { const s = a.risk_score ?? 50; return s > 40 && s <= 65; }).length, icon: TrendingDown, color: "text-risk-medium" },
+          { label: "Low Risk", value: sorted.filter(a => (a.risk_score ?? 50) <= 40).length, icon: CheckCircle2, color: "text-risk-low" },
+        ].map((kpi, i) => (
+          <Card key={i} className="border-border/50">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className={`h-9 w-9 rounded-lg bg-muted/30 flex items-center justify-center ${kpi.color}`}>
+                <kpi.icon className="h-4.5 w-4.5" />
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{kpi.label}</p>
+                <p className="text-xl font-bold text-foreground">{kpi.value}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </motion.div>
 
       {applications.length === 0 ? (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-12 text-center">
           <CheckCircle2 className="h-12 w-12 text-risk-low mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-foreground mb-2">All caught up!</h3>
-          <p className="text-sm text-muted-foreground">No applications pending your review. Credit Officers will notify you when applications are ready.</p>
+          <p className="text-sm text-muted-foreground">No applications pending your review.</p>
         </motion.div>
       ) : (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-card overflow-hidden">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass-card overflow-hidden">
+          <div className="p-4 border-b border-border/50 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-foreground">Approval Queue</h3>
+            <p className="text-[10px] text-muted-foreground">Sorted by risk priority</p>
+          </div>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-[10px] uppercase tracking-wider font-semibold">Company Name</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-wider font-semibold w-8">Priority</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-wider font-semibold">Company</TableHead>
                 <TableHead className="text-[10px] uppercase tracking-wider font-semibold">Sector</TableHead>
                 <TableHead className="text-[10px] uppercase tracking-wider font-semibold">Loan Amount</TableHead>
                 <TableHead className="text-[10px] uppercase tracking-wider font-semibold">Risk Score</TableHead>
                 <TableHead className="text-[10px] uppercase tracking-wider font-semibold">CO Decision</TableHead>
-                <TableHead className="text-[10px] uppercase tracking-wider font-semibold">Status</TableHead>
-                <TableHead className="text-[10px] uppercase tracking-wider font-semibold">Action</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-wider font-semibold">Priority Tag</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-wider font-semibold text-right">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {applications.map((app) => (
-                <TableRow key={app.id} className="hover:bg-muted/30">
-                  <TableCell>
-                    <p className="font-medium text-foreground text-sm">{app.company_name}</p>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">{app.sector}</TableCell>
-                  <TableCell className="text-foreground font-medium text-sm">₹{Number(app.loan_amount).toLocaleString()} Cr</TableCell>
-                  <TableCell><RiskBadge score={app.risk_score ?? 50} label={`${app.risk_score ?? 50}`} size="md" /></TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={`text-[10px] ${coDecisionColor(app.credit_officer_decision)}`}>
-                      {coDecisionLabel(app.credit_officer_decision)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell><StatusBadge status={app.status} /></TableCell>
-                  <TableCell>
-                    <Button size="sm" variant="outline" className="gap-1.5 text-xs h-7" onClick={() => handleReview(app)}>
-                      <Eye className="h-3.5 w-3.5" /> Review
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {sorted.map((app) => {
+                const priority = riskPriorityLabel(app.risk_score);
+                return (
+                  <TableRow key={app.id} className={`hover:bg-muted/30 transition-colors ${priority.color}`}>
+                    <TableCell className="text-lg">{priority.icon}</TableCell>
+                    <TableCell>
+                      <p className="font-semibold text-foreground text-sm">{app.company_name}</p>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">{app.sector}</TableCell>
+                    <TableCell className="text-foreground font-medium text-sm">₹{Number(app.loan_amount).toLocaleString()} Cr</TableCell>
+                    <TableCell><RiskBadge score={app.risk_score ?? 50} label={`${app.risk_score ?? 50}`} size="md" /></TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={`text-[10px] ${coDecisionColor(app.credit_officer_decision)}`}>
+                        {coDecisionLabel(app.credit_officer_decision)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <span className={`text-[10px] font-semibold ${
+                        (app.risk_score ?? 50) > 65 ? "text-risk-high" : (app.risk_score ?? 50) > 40 ? "text-risk-medium" : "text-risk-low"
+                      }`}>{priority.label}</span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button size="sm" className="gap-1.5 text-xs h-8" onClick={() => handleReview(app)}>
+                        <Eye className="h-3.5 w-3.5" /> Review
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </motion.div>
@@ -276,7 +345,7 @@ function ManagerReviewQueue({
   );
 }
 
-// ─── Manager Review Panel (existing full review UI) ──────────────
+// ─── Manager Review Panel (Professional Banking UI) ──────────────
 function ManagerReviewPanel({ onBackToQueue }: { onBackToQueue: () => void }) {
   const { selectedApplication, clearSelectedApplication } = useApplicationStore();
   const [decision, setDecision] = useState("");
@@ -288,6 +357,8 @@ function ManagerReviewPanel({ onBackToQueue }: { onBackToQueue: () => void }) {
   const [interestRate, setInterestRate] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [showImpactSummary, setShowImpactSummary] = useState(false);
   const [comments, setComments] = useState<{ user: string; role: string; time: string; text: string; author?: string }[]>([]);
   const [auditTrail, setAuditTrail] = useState<{ time: string; event: string; user: string }[]>([]);
   const [decisionState, setDecisionState] = useState<DecisionState>({ credit_officer_decision: null, manager_decision: null, final_status: null });
@@ -300,6 +371,7 @@ function ManagerReviewPanel({ onBackToQueue }: { onBackToQueue: () => void }) {
     setComments((selectedApplication.comments || []).map(c => ({ ...c, user: (c as any).author || (c as any).user || "Unknown" })));
     setDecision("");
     setSubmitted(false);
+    setShowImpactSummary(false);
     setRiskAdjustment([0]);
     setSelectedReasons([]);
 
@@ -317,20 +389,14 @@ function ManagerReviewPanel({ onBackToQueue }: { onBackToQueue: () => void }) {
         setDecisionState(ds);
         if (ds.manager_decision) {
           setSubmitted(true);
+          setShowImpactSummary(true);
           setDecision(ds.manager_decision === "approve" ? "approve" : ds.manager_decision === "reject" ? "reject" : "re-review");
         }
-
-        const { data } = await supabase
-          .from("audit_logs")
-          .select("*")
-          .eq("application_id", selectedApplication.id)
-          .order("created_at", { ascending: false })
-          .limit(10);
+        const { data } = await supabase.from("audit_logs").select("*").eq("application_id", selectedApplication.id).order("created_at", { ascending: false }).limit(10);
         if (data && data.length > 0) {
           setAuditTrail(data.map(d => ({
             time: new Date(d.created_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
-            event: d.event_description,
-            user: d.user_name || "System",
+            event: d.event_description, user: d.user_name || "System",
           })));
         } else {
           setAuditTrail([{ time: "—", event: "Application created", user: "System" }]);
@@ -349,15 +415,8 @@ function ManagerReviewPanel({ onBackToQueue }: { onBackToQueue: () => void }) {
   const adjustedScore = Math.max(0, Math.min(100, aiRiskScore + riskAdjustment[0]));
 
   const toggleReason = (reason: string) => {
-    setSelectedReasons((prev) =>
-      prev.includes(reason) ? prev.filter((r) => r !== reason) : [...prev, reason]
-    );
+    setSelectedReasons((prev) => prev.includes(reason) ? prev.filter((r) => r !== reason) : [...prev, reason]);
   };
-
-  const getRiskColor = (score: number) =>
-    score <= 40 ? "text-risk-low" : score <= 65 ? "text-risk-medium" : "text-risk-high";
-  const getRiskLabel = (score: number) =>
-    score <= 40 ? "Low Risk" : score <= 65 ? "Medium Risk" : "High Risk";
 
   const policyAlerts = [
     ...(app.financials.dscr < 1.5 ? [{ severity: "info", message: `DSCR ${app.financials.dscr}x is below recommended 1.5x threshold` }] : []),
@@ -366,15 +425,20 @@ function ManagerReviewPanel({ onBackToQueue }: { onBackToQueue: () => void }) {
     ...(app.riskScore > 65 ? [{ severity: "error", message: `High risk score: ${app.riskScore} — requires committee review` }] : []),
   ];
 
-  const handleSubmitDecision = async () => {
+  const handleAttemptSubmit = () => {
     if (!decision) {
-      toast({ title: "Select a Decision", description: "Please choose Approve, Reject, or Re-Review.", variant: "destructive" });
+      toast({ title: "Select a Decision", description: "Please choose Approve, Reject, or Send for Review.", variant: "destructive" });
       return;
     }
     if (selectedReasons.length === 0) {
       toast({ title: "Reasons Required", description: "Please select at least one decision reason.", variant: "destructive" });
       return;
     }
+    setShowConfirmDialog(true);
+  };
+
+  const handleConfirmDecision = async () => {
+    setShowConfirmDialog(false);
     setSubmitting(true);
 
     const mgrDecisionMap: Record<string, ManagerDecision> = {
@@ -402,25 +466,18 @@ function ManagerReviewPanel({ onBackToQueue }: { onBackToQueue: () => void }) {
       approve: "Approved", reject: "Rejected", conditional: "Under Review", "re-review": "Sent for Re-Review"
     };
     const decisionLabel = decisionLabels[decision] || decision;
-
     const timeStr = new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-    setAuditTrail(prev => [
-      { time: timeStr, event: `Manager decision: ${decisionLabel} — ₹${approvedAmount} Cr at ${interestRate}%`, user: "Credit Manager" },
-      ...prev,
-    ]);
+    setAuditTrail(prev => [{ time: timeStr, event: `Manager decision: ${decisionLabel} — ₹${approvedAmount} Cr at ${interestRate}%`, user: "Credit Manager" }, ...prev]);
 
     setSubmitting(false);
     setSubmitted(true);
-    toast({ title: "Decision Submitted", description: `Final decision: ${decisionState.final_status || decisionLabel}. Loan amount: ₹${approvedAmount} Cr.` });
+    setShowImpactSummary(true);
+    toast({ title: "Decision Submitted", description: `Final: ${decisionState.final_status || decisionLabel}` });
   };
 
   const handleSendComment = () => {
     if (!newComment.trim()) return;
-    setComments(prev => [...prev, {
-      user: "Credit Manager", role: "Manager",
-      time: new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
-      text: newComment,
-    }]);
+    setComments(prev => [...prev, { user: "Credit Manager", role: "Manager", time: new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }), text: newComment }]);
     setNewComment("");
     toast({ title: "Comment Posted" });
   };
@@ -430,50 +487,80 @@ function ManagerReviewPanel({ onBackToQueue }: { onBackToQueue: () => void }) {
     onBackToQueue();
   };
 
-  const stageIcon = (status: string) => {
-    if (status === "completed") return <CheckCircle2 className="h-5 w-5 text-risk-low" />;
-    if (status === "active" || status === "in_progress") return <Clock className="h-5 w-5 text-risk-medium animate-pulse" />;
-    return <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/30" />;
+  const decisionLabelMap: Record<string, string> = {
+    approve: "Approve Loan", reject: "Reject Application", conditional: "Conditional Approval", "re-review": "Send for Review"
   };
 
-  const approvalStages = app.pipeline.map(p => ({
-    role: p.stage,
-    user: "—",
-    status: p.status === "completed" ? "completed" : p.status === "active" ? "in_progress" : "pending",
-    timestamp: p.date || "—",
-    decision: p.status === "completed" ? "Completed" : p.status === "active" ? "In Progress" : "Pending",
-  }));
-
   return (
-    <div className="space-y-6">
-      <ActiveApplicationBanner />
+    <div className="space-y-5">
+      {/* Confirmation Dialog */}
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Gavel className="h-5 w-5 text-primary" />
+              Confirm Decision
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to <strong className="text-foreground">{decisionLabelMap[decision] || decision}</strong> for <strong className="text-foreground">{app.company}</strong>?
+              <br /><br />
+              <span className="text-xs">Loan Amount: ₹{approvedAmount} Cr · Interest Rate: {interestRate}%</span>
+              <br />
+              <span className="text-xs text-muted-foreground">This action will update the application status and notify the Credit Officer.</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDecision} className={
+              decision === "approve" ? "bg-risk-low hover:bg-risk-low/90" :
+              decision === "reject" ? "bg-risk-high hover:bg-risk-high/90" : ""
+            }>
+              Confirm {decisionLabelMap[decision]}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-      {/* Header with Back button */}
+      {/* Summary Header Banner */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={handleBackToQueue}>
-              ← Back to Queue
-            </Button>
-            <div>
-              <h1 className="text-2xl font-bold text-foreground tracking-tight">Manager Review — {app.company}</h1>
-              <p className="text-sm text-muted-foreground mt-1">Review AI recommendations and make final credit decision</p>
+        <Card className="border-2 border-primary/20 bg-gradient-to-r from-primary/5 via-background to-primary/5">
+          <CardContent className="p-5">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-4">
+                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={handleBackToQueue}>
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <div>
+                  <div className="flex items-center gap-3 mb-1">
+                    <h1 className="text-xl font-bold text-foreground">{app.company}</h1>
+                    <Badge variant="outline" className="text-[10px] border-primary/30 text-primary bg-primary/10">
+                      {app.status}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1"><Factory className="h-3 w-3" /> {app.sector}</span>
+                    <span className="flex items-center gap-1"><IndianRupee className="h-3 w-3" /> ₹{app.loanAmount} Cr</span>
+                    <span className="flex items-center gap-1"><Shield className="h-3 w-3" /> Risk: {aiRiskScore}</span>
+                    <span className="flex items-center gap-1"><Scale className="h-3 w-3" /> {getRiskLabel(aiRiskScore)}</span>
+                  </div>
+                </div>
+              </div>
+              <Badge variant="outline" className={`gap-1.5 px-3 py-1.5 text-xs ${
+                submitted
+                  ? decision === "approve" ? "border-risk-low/30 text-risk-low bg-risk-low/10" : decision === "reject" ? "border-risk-high/30 text-risk-high bg-risk-high/10" : "border-risk-medium/30 text-risk-medium bg-risk-medium/10"
+                  : "border-risk-medium/30 text-risk-medium bg-risk-medium/10 animate-pulse"
+              }`}>
+                {submitted ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
+                {submitted ? "Decision Finalized" : "🟡 Pending Manager Decision"}
+              </Badge>
             </div>
-          </div>
-          <Badge variant="outline" className={`gap-1.5 px-3 py-1.5 text-xs ${
-            submitted
-              ? decision === "approve" ? "border-risk-low/30 text-risk-low bg-risk-low/10" : decision === "reject" ? "border-risk-high/30 text-risk-high bg-risk-high/10" : "border-risk-medium/30 text-risk-medium bg-risk-medium/10"
-              : "border-risk-medium/30 text-risk-medium bg-risk-medium/10"
-          }`}>
-            {submitted ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
-            {submitted ? "Decision Submitted" : "Pending Decision"}
-          </Badge>
-        </div>
+          </CardContent>
+        </Card>
       </motion.div>
 
       {/* Policy Alerts */}
       {policyAlerts.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {policyAlerts.map((alert, i) => (
               <div key={i} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium ${
@@ -489,13 +576,89 @@ function ManagerReviewPanel({ onBackToQueue }: { onBackToQueue: () => void }) {
         </motion.div>
       )}
 
-      {/* Three Panel Layout */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-        {/* Left Panel — Summary */}
-        <motion.div className="xl:col-span-3 space-y-4" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }}>
+      {/* Impact Summary (shown after decision) */}
+      <AnimatePresence>
+        {showImpactSummary && submitted && (
+          <motion.div initial={{ opacity: 0, scale: 0.95, y: -10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}>
+            <Card className={`border-2 ${
+              decision === "approve" ? "border-risk-low/40 bg-risk-low/5" :
+              decision === "reject" ? "border-risk-high/40 bg-risk-high/5" :
+              "border-risk-medium/40 bg-risk-medium/5"
+            }`}>
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className={`h-12 w-12 rounded-xl flex items-center justify-center ${
+                      decision === "approve" ? "bg-risk-low/20" : decision === "reject" ? "bg-risk-high/20" : "bg-risk-medium/20"
+                    }`}>
+                      {decision === "approve" ? <CheckCircle2 className="h-6 w-6 text-risk-low" /> :
+                       decision === "reject" ? <XCircle className="h-6 w-6 text-risk-high" /> :
+                       <RotateCcw className="h-6 w-6 text-risk-medium" />}
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Decision Impact</p>
+                      <p className={`text-lg font-bold ${
+                        decision === "approve" ? "text-risk-low" : decision === "reject" ? "text-risk-high" : "text-risk-medium"
+                      }`}>
+                        {decisionState.final_status || (decision === "approve" ? "Loan Approved" : decision === "reject" ? "Application Rejected" : "Under Review")}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-6 text-center">
+                    <div>
+                      <p className="text-[10px] text-muted-foreground">Approved Amount</p>
+                      <p className="text-sm font-bold text-foreground">₹{approvedAmount} Cr</p>
+                    </div>
+                    <Separator orientation="vertical" className="h-8" />
+                    <div>
+                      <p className="text-[10px] text-muted-foreground">Interest Rate</p>
+                      <p className="text-sm font-bold text-foreground">{interestRate}%</p>
+                    </div>
+                    <Separator orientation="vertical" className="h-8" />
+                    <div>
+                      <p className="text-[10px] text-muted-foreground">Risk Premium</p>
+                      <p className="text-sm font-bold text-foreground">{(Number(interestRate) - 8.5).toFixed(1)}%</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Three-Column Layout */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
+        {/* LEFT — Company Overview + Financials */}
+        <motion.div className="xl:col-span-3 space-y-4" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
           <ApplicationSummaryCard app={app} />
 
-          {/* Credit Officer Decision Status */}
+          {/* Financial Ratios */}
+          <Card className="border-border/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <TrendingDown className="h-4 w-4 text-primary" /> Key Financial Ratios
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {[
+                { label: "Debt-to-Equity", value: app.financials?.debtEquity ? `${app.financials.debtEquity}x` : "—", warn: (app.financials?.debtEquity || 0) > 1.5 },
+                { label: "Interest Coverage", value: app.financials?.interestCoverage ? `${app.financials.interestCoverage}x` : "—", warn: (app.financials?.interestCoverage || 0) < 2 },
+                { label: "DSCR", value: app.financials?.dscr ? `${app.financials.dscr}x` : "—", warn: (app.financials?.dscr || 0) < 1.5 },
+                { label: "Current Ratio", value: app.financials?.currentRatio ? `${app.financials.currentRatio}x` : "—", warn: (app.financials?.currentRatio || 0) < 1.2 },
+              ].map((r, i) => (
+                <div key={i} className={`flex items-center justify-between p-2.5 rounded-lg border ${r.warn ? "bg-risk-high/5 border-risk-high/20" : "bg-muted/20 border-border/50"}`}>
+                  <span className="text-xs text-muted-foreground">{r.label}</span>
+                  <div className="flex items-center gap-1.5">
+                    {r.warn && <AlertTriangle className="h-3 w-3 text-risk-high" />}
+                    <span className={`text-xs font-bold ${r.warn ? "text-risk-high" : "text-foreground"}`}>{r.value}</span>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* CO Recommendation */}
           <Card className={`border-2 ${
             decisionState.credit_officer_decision === "approve" ? "border-risk-low/30 bg-risk-low/5" :
             decisionState.credit_officer_decision === "reject" ? "border-risk-high/30 bg-risk-high/5" :
@@ -504,12 +667,12 @@ function ManagerReviewPanel({ onBackToQueue }: { onBackToQueue: () => void }) {
           }`}>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <User className="h-4 w-4 text-primary" /> Credit Officer Recommendation
+                <User className="h-4 w-4 text-primary" /> CO Recommendation
               </CardTitle>
             </CardHeader>
             <CardContent>
               {decisionState.credit_officer_decision ? (
-                <div className="text-center py-2">
+                <div className="text-center py-3">
                   <Badge className={`text-sm px-4 py-1.5 ${
                     decisionState.credit_officer_decision === "approve" ? "bg-risk-low/15 text-risk-low border-risk-low/30" :
                     decisionState.credit_officer_decision === "reject" ? "bg-risk-high/15 text-risk-high border-risk-high/30" :
@@ -522,104 +685,173 @@ function ManagerReviewPanel({ onBackToQueue }: { onBackToQueue: () => void }) {
               ) : (
                 <div className="text-center py-3">
                   <Clock className="h-5 w-5 text-muted-foreground mx-auto mb-1" />
-                  <p className="text-xs text-muted-foreground">Awaiting Credit Officer decision</p>
+                  <p className="text-xs text-muted-foreground">Awaiting CO decision</p>
                 </div>
               )}
             </CardContent>
           </Card>
+        </motion.div>
 
+        {/* CENTER — AI Risk Intelligence */}
+        <motion.div className="xl:col-span-5 space-y-4" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+          {/* Risk Gauge + Score */}
+          <Card className="border-border/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <Brain className="h-4 w-4 text-primary" /> AI Risk Intelligence
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-6">
+                <RiskGauge score={aiRiskScore} />
+                <div className="flex-1 space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="p-2.5 rounded-lg bg-muted/30 border border-border/50">
+                      <p className="text-[10px] text-muted-foreground">Default Probability</p>
+                      <p className="text-sm font-bold text-foreground">{(app.defaultProbability * 100).toFixed(1)}%</p>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-muted/30 border border-border/50">
+                      <p className="text-[10px] text-muted-foreground">CIBIL Score</p>
+                      <p className="text-sm font-bold text-foreground">{app.cibilScore || "—"}</p>
+                    </div>
+                  </div>
+                  <div className="p-3 rounded-lg bg-risk-medium/10 border border-risk-medium/20">
+                    <div className="flex items-center gap-2">
+                      <Zap className="h-3.5 w-3.5 text-risk-medium" />
+                      <span className="text-[10px] font-semibold text-risk-medium uppercase tracking-wider">AI Recommendation</span>
+                    </div>
+                    <p className="text-sm font-bold text-foreground mt-1">{app.recommendation}</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Explainable AI + Early Warnings */}
+          <Card className="border-border/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold">Risk Factors & Early Warnings</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Accordion type="multiple" defaultValue={["risks", "warnings"]}>
+                <AccordionItem value="risks">
+                  <AccordionTrigger className="text-xs font-semibold py-2">Top Risk Drivers</AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-2">
+                      {(app.explainableAI || []).map((item: any, i: number) => (
+                        <div key={i} className={`flex items-start gap-2 p-2.5 rounded-lg border ${
+                          item.severity === "high" ? "bg-risk-high/5 border-risk-high/20" :
+                          item.severity === "medium" ? "bg-risk-medium/5 border-risk-medium/20" :
+                          "bg-risk-low/5 border-risk-low/20"
+                        }`}>
+                          <div className={`w-2 h-2 rounded-full mt-1 shrink-0 ${
+                            item.severity === "high" ? "bg-risk-high" : item.severity === "medium" ? "bg-risk-medium" : "bg-risk-low"
+                          }`} />
+                          <p className="text-xs text-muted-foreground">{item.text}</p>
+                        </div>
+                      ))}
+                      {(!app.explainableAI || app.explainableAI.length === 0) && (
+                        <p className="text-xs text-muted-foreground text-center py-3">No risk factors available</p>
+                      )}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="warnings">
+                  <AccordionTrigger className="text-xs font-semibold py-2">Early Warning Signals</AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-2">
+                      {app.financials?.gstMismatch && (
+                        <div className="flex items-center gap-2 p-2.5 rounded-lg bg-risk-high/5 border border-risk-high/20">
+                          <AlertTriangle className="h-3.5 w-3.5 text-risk-high shrink-0" />
+                          <p className="text-xs text-risk-high">⚠ GST mismatch detected: {app.financials.gstMismatchAmount}</p>
+                        </div>
+                      )}
+                      {(app.researchFindings || []).filter((r: any) => r.sentiment === "negative").map((r: any, i: number) => (
+                        <div key={i} className="flex items-center gap-2 p-2.5 rounded-lg bg-risk-medium/5 border border-risk-medium/20">
+                          <AlertTriangle className="h-3.5 w-3.5 text-risk-medium shrink-0" />
+                          <p className="text-xs text-risk-medium">⚠ {r.title}</p>
+                        </div>
+                      ))}
+                      {!app.financials?.gstMismatch && !(app.researchFindings || []).some((r: any) => r.sentiment === "negative") && (
+                        <p className="text-xs text-risk-low text-center py-3">✓ No early warning signals detected</p>
+                      )}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </CardContent>
+          </Card>
+
+          {/* CAM Summary */}
+          <CAMSummaryCard app={app} />
+
+          {/* Decision Timeline + Audit Trail */}
           <DecisionTimeline decisionState={decisionState} />
 
           <Card className="border-border/50">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold">Approval Workflow</CardTitle>
-            </CardHeader>
+            <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">Audit Trail</CardTitle></CardHeader>
             <CardContent>
-              <div className="space-y-0">
-                {approvalStages.map((stage, i) => (
-                  <div key={i} className="flex gap-3">
-                    <div className="flex flex-col items-center">
-                      {stageIcon(stage.status)}
-                      {i < approvalStages.length - 1 && (
-                        <div className={`w-0.5 h-full min-h-[40px] ${stage.status === "completed" ? "bg-risk-low/40" : "bg-border"}`} />
-                      )}
-                    </div>
-                    <div className="pb-4">
-                      <p className="text-xs font-semibold text-foreground">{stage.role}</p>
-                      <p className="text-[10px] text-muted-foreground">{stage.timestamp}</p>
-                      <Badge variant="outline" className={`mt-1 text-[9px] ${
-                        stage.status === "completed" ? "border-risk-low/30 text-risk-low" :
-                        stage.status === "in_progress" ? "border-risk-medium/30 text-risk-medium" :
-                        "border-border text-muted-foreground"
-                      }`}>{stage.decision}</Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Center Panel — CAM Summary */}
-        <motion.div className="xl:col-span-5 space-y-4" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <CAMSummaryCard app={app} />
-
-          {/* Audit Trail */}
-          <Card className="border-border/50">
-            <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold">Decision Audit Trail</CardTitle></CardHeader>
-            <CardContent>
-              <div className="space-y-0">
-                {auditTrail.map((entry, i) => (
-                  <div key={i} className="flex gap-3 group">
-                    <div className="flex flex-col items-center">
-                      <div className="h-2 w-2 rounded-full bg-primary mt-1.5" />
-                      {i < auditTrail.length - 1 && <div className="w-0.5 flex-1 bg-border" />}
-                    </div>
-                    <div className="pb-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-mono text-muted-foreground">{entry.time}</span>
-                        <span className="text-[10px] text-primary font-medium">{entry.user}</span>
+              <ScrollArea className="max-h-[200px]">
+                <div className="space-y-0">
+                  {auditTrail.map((entry, i) => (
+                    <div key={i} className="flex gap-3">
+                      <div className="flex flex-col items-center">
+                        <div className="h-2 w-2 rounded-full bg-primary mt-1.5" />
+                        {i < auditTrail.length - 1 && <div className="w-0.5 flex-1 bg-border" />}
                       </div>
-                      <p className="text-xs text-foreground">{entry.event}</p>
+                      <div className="pb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-mono text-muted-foreground">{entry.time}</span>
+                          <span className="text-[10px] text-primary font-medium">{entry.user}</span>
+                        </div>
+                        <p className="text-xs text-foreground">{entry.event}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </ScrollArea>
             </CardContent>
           </Card>
         </motion.div>
 
-        {/* Right Panel — Manager Decision Controls */}
-        <motion.div className="xl:col-span-4 space-y-4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.25 }}>
+        {/* RIGHT — Decision Panel */}
+        <motion.div className="xl:col-span-4 space-y-4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}>
+          {/* Decision Buttons */}
           <Card className="border-border/50">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold">Manager Decision Controls</CardTitle>
-              <CardDescription className="text-xs">Override or confirm AI recommendation</CardDescription>
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <Gavel className="h-4 w-4 text-primary" /> Manager Decision
+              </CardTitle>
+              <CardDescription className="text-xs">Make the final credit decision</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-2">
                 {[
-                  { value: "approve", label: "Approve", icon: ThumbsUp, color: "border-risk-low/40 bg-risk-low/10 text-risk-low hover:bg-risk-low/20" },
-                  { value: "conditional", label: "Conditional", icon: AlertTriangle, color: "border-risk-medium/40 bg-risk-medium/10 text-risk-medium hover:bg-risk-medium/20" },
-                  { value: "reject", label: "Reject", icon: ThumbsDown, color: "border-risk-high/40 bg-risk-high/10 text-risk-high hover:bg-risk-high/20" },
-                  { value: "re-review", label: "Send for Review", icon: RotateCcw, color: "border-primary/40 bg-primary/10 text-primary hover:bg-primary/20" },
+                  { value: "approve", label: "Approve Loan", icon: ThumbsUp, color: "border-risk-low/40 bg-risk-low/10 text-risk-low hover:bg-risk-low/20", desc: "Approve the credit facility" },
+                  { value: "reject", label: "Reject Application", icon: ThumbsDown, color: "border-risk-high/40 bg-risk-high/10 text-risk-high hover:bg-risk-high/20", desc: "Decline the application" },
+                  { value: "re-review", label: "Send for Review", icon: RotateCcw, color: "border-primary/40 bg-primary/10 text-primary hover:bg-primary/20", desc: "Return to Credit Officer" },
                 ].map((opt) => (
                   <button
                     key={opt.value}
-                    onClick={() => { setDecision(opt.value); setSubmitted(false); }}
+                    onClick={() => { setDecision(opt.value); setSubmitted(false); setShowImpactSummary(false); }}
                     disabled={submitted}
-                    className={`flex items-center gap-2 p-3 rounded-lg border text-xs font-semibold transition-all disabled:opacity-50 ${
+                    className={`w-full flex items-center gap-3 p-3.5 rounded-lg border text-left transition-all disabled:opacity-50 ${
                       decision === opt.value ? `${opt.color} ring-2 ring-offset-1 ring-offset-background ring-current` : "border-border bg-muted/20 text-muted-foreground hover:bg-muted/40"
                     }`}
                   >
-                    <opt.icon className="h-4 w-4" />
-                    {opt.label}
+                    <opt.icon className="h-5 w-5 shrink-0" />
+                    <div>
+                      <p className="text-xs font-semibold">{opt.label}</p>
+                      <p className="text-[10px] opacity-70">{opt.desc}</p>
+                    </div>
                   </button>
                 ))}
               </div>
 
+              <Separator />
+
               <div>
-                <label className="text-xs font-medium text-foreground mb-2 block">Decision Reasons (Required)</label>
+                <label className="text-xs font-medium text-foreground mb-2 block">Decision Reasons</label>
                 <div className="flex flex-wrap gap-1.5">
                   {decisionReasons.map((reason) => (
                     <button
@@ -637,103 +869,61 @@ function ManagerReviewPanel({ onBackToQueue }: { onBackToQueue: () => void }) {
                   ))}
                 </div>
               </div>
-
-              <div>
-                <label className="text-xs font-medium text-foreground mb-2 block">Additional Comments</label>
-                <Textarea
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                  placeholder="Enter detailed decision rationale..."
-                  className="text-xs min-h-[80px] resize-none"
-                  disabled={submitted}
-                />
-              </div>
             </CardContent>
           </Card>
 
+          {/* Risk Override + Loan Terms */}
           <Card className="border-border/50">
-            <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold">Risk Override & Loan Terms</CardTitle></CardHeader>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold">Loan Terms & Risk Adjustment</CardTitle>
+            </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-[10px] text-muted-foreground">AI Risk Score</p>
+                  <p className="text-[10px] text-muted-foreground">AI Score</p>
                   <p className={`text-lg font-bold ${getRiskColor(aiRiskScore)}`}>{aiRiskScore}</p>
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 <div className="text-right">
-                  <p className="text-[10px] text-muted-foreground">Adjusted Score</p>
+                  <p className="text-[10px] text-muted-foreground">Adjusted</p>
                   <p className={`text-lg font-bold ${getRiskColor(adjustedScore)}`}>{adjustedScore}</p>
                 </div>
               </div>
               <div>
-                <label className="text-[10px] text-muted-foreground mb-1 block">Manual Adjustment ({riskAdjustment[0] > 0 ? "+" : ""}{riskAdjustment[0]})</label>
+                <label className="text-[10px] text-muted-foreground mb-1 block">Adjustment ({riskAdjustment[0] > 0 ? "+" : ""}{riskAdjustment[0]})</label>
                 <Slider value={riskAdjustment} onValueChange={setRiskAdjustment} min={-30} max={30} step={1} className="py-2" disabled={submitted} />
               </div>
               <Separator />
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] text-muted-foreground mb-1 block">Approved Amount (₹ Cr)</label>
+                  <label className="text-[10px] text-muted-foreground mb-1 block">Amount (₹ Cr)</label>
                   <Input value={approvedAmount} onChange={(e) => setApprovedAmount(e.target.value)} className="text-xs h-8" disabled={submitted} />
                 </div>
                 <div>
-                  <label className="text-[10px] text-muted-foreground mb-1 block">Interest Rate (%)</label>
+                  <label className="text-[10px] text-muted-foreground mb-1 block">Rate (%)</label>
                   <Input value={interestRate} onChange={(e) => setInterestRate(e.target.value)} className="text-xs h-8" disabled={submitted} />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Final Decision Card */}
-          <AnimatePresence>
-            {decision && (
-              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
-                <Card className={`border-2 ${
-                  decision === "approve" ? "border-risk-low/40 bg-risk-low/5" :
-                  decision === "conditional" ? "border-risk-medium/40 bg-risk-medium/5" :
-                  decision === "reject" ? "border-risk-high/40 bg-risk-high/5" :
-                  "border-primary/40 bg-primary/5"
-                }`}>
-                  <CardContent className="pt-5 space-y-3">
-                    <div className="text-center">
-                      <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Final Decision</p>
-                      <p className={`text-xl font-bold mt-1 ${
-                        decision === "approve" ? "text-risk-low" :
-                        decision === "conditional" ? "text-risk-medium" :
-                        decision === "reject" ? "text-risk-high" : "text-primary"
-                      }`}>
-                        {decision === "approve" ? "APPROVED" : decision === "conditional" ? "CONDITIONAL APPROVAL" : decision === "reject" ? "REJECTED" : "SENT FOR RE-REVIEW"}
-                      </p>
-                    </div>
-                    <Separator />
-                    <div className="grid grid-cols-2 gap-2 text-center">
-                      <div><p className="text-[10px] text-muted-foreground">Loan Amount</p><p className="text-sm font-bold text-foreground">₹{approvedAmount} Cr</p></div>
-                      <div><p className="text-[10px] text-muted-foreground">Interest Rate</p><p className="text-sm font-bold text-foreground">{interestRate}%</p></div>
-                    </div>
-                    <Button
-                      className="w-full gap-2 text-xs"
-                      size="sm"
-                      onClick={handleSubmitDecision}
-                      disabled={submitting || submitted}
-                    >
-                      {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : submitted ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Send className="h-3.5 w-3.5" />}
-                      {submitting ? "Submitting..." : submitted ? "Decision Submitted" : "Submit Decision"}
-                    </Button>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Comments Thread */}
+          {/* Manager Comments */}
           <Card className="border-border/50">
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-2">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <MessageSquare className="h-4 w-4 text-primary" /> Committee Discussion
+                <MessageSquare className="h-4 w-4 text-primary" /> Manager Notes
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <ScrollArea className="max-h-[250px]">
-                <div className="space-y-3 pr-2">
+              <Textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Add your decision rationale and notes..."
+                className="text-xs min-h-[80px] resize-none"
+                disabled={submitted}
+              />
+              <ScrollArea className="max-h-[150px]">
+                <div className="space-y-2">
                   {comments.map((c, i) => (
                     <div key={i} className="p-2.5 rounded-lg bg-muted/30 border border-border/50">
                       <div className="flex items-center justify-between mb-1">
@@ -742,30 +932,39 @@ function ManagerReviewPanel({ onBackToQueue }: { onBackToQueue: () => void }) {
                             {c.author?.split(" ").map((n: string) => n[0]).join("") || c.user?.split(" ").map((n: string) => n[0]).join("") || "?"}
                           </div>
                           <span className="text-[10px] font-semibold text-foreground">{(c as any).author || c.user}</span>
-                          <Badge variant="outline" className="text-[8px] px-1.5 py-0">{c.role}</Badge>
                         </div>
                         <span className="text-[9px] text-muted-foreground">{c.time}</span>
                       </div>
-                      <p className="text-[11px] text-muted-foreground leading-relaxed">{c.text}</p>
+                      <p className="text-[11px] text-muted-foreground">{c.text}</p>
                     </div>
                   ))}
-                  {comments.length === 0 && (
-                    <p className="text-xs text-muted-foreground text-center py-4">No comments yet</p>
-                  )}
                 </div>
               </ScrollArea>
               <div className="flex gap-2">
-                <Input
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  placeholder="Add a comment..."
-                  className="text-xs h-8 flex-1"
-                  onKeyDown={(e) => e.key === "Enter" && handleSendComment()}
-                />
-                <Button size="sm" className="h-8 px-3 text-xs" onClick={handleSendComment}>Send</Button>
+                <Input value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="Add comment..." className="text-xs h-8 flex-1" onKeyDown={(e) => e.key === "Enter" && handleSendComment()} />
+                <Button size="sm" className="h-8 px-3 text-xs" onClick={handleSendComment}>Post</Button>
               </div>
             </CardContent>
           </Card>
+
+          {/* Submit Button */}
+          <AnimatePresence>
+            {decision && !submitted && (
+              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
+                <Button
+                  className={`w-full gap-2 h-12 text-sm font-semibold ${
+                    decision === "approve" ? "bg-risk-low hover:bg-risk-low/90 text-white" :
+                    decision === "reject" ? "bg-risk-high hover:bg-risk-high/90 text-white" : ""
+                  }`}
+                  onClick={handleAttemptSubmit}
+                  disabled={submitting}
+                >
+                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  {submitting ? "Processing..." : decisionLabelMap[decision] || "Submit Decision"}
+                </Button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
       </div>
     </div>
@@ -777,18 +976,16 @@ function ManagerReviewPanel({ onBackToQueue }: { onBackToQueue: () => void }) {
 function getRiskColor(score: number) {
   return score <= 40 ? "text-risk-low" : score <= 65 ? "text-risk-medium" : "text-risk-high";
 }
-
 function getRiskLabel(score: number) {
   return score <= 40 ? "Low Risk" : score <= 65 ? "Medium Risk" : "High Risk";
 }
 
 function ApplicationSummaryCard({ app }: { app: any }) {
-  const aiRiskScore = app.riskScore;
   return (
     <Card className="border-border/50">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm font-semibold flex items-center gap-2">
-          <Building2 className="h-4 w-4 text-primary" /> Application Summary
+          <Building2 className="h-4 w-4 text-primary" /> Company Overview
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -800,25 +997,9 @@ function ApplicationSummaryCard({ app }: { app: any }) {
         <div className="space-y-3">
           <InfoRow icon={<IndianRupee className="h-3.5 w-3.5" />} label="Loan Requested" value={`₹${app.loanAmount} Cr`} />
           <InfoRow icon={<Factory className="h-3.5 w-3.5" />} label="Sector" value={app.sector} />
-          <InfoRow icon={<User className="h-3.5 w-3.5" />} label="Promoter" value={app.promoterGroup} />
-          <InfoRow icon={<FileCheck className="h-3.5 w-3.5" />} label="Incorporated" value={app.incorporationYear} />
-          <InfoRow icon={<Building2 className="h-3.5 w-3.5" />} label="CIBIL Score" value={String(app.cibilScore)} />
-        </div>
-        <Separator />
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">AI Risk Score</span>
-            <span className={`text-xl font-bold ${getRiskColor(aiRiskScore)}`}>{aiRiskScore}</span>
-          </div>
-          <Progress value={aiRiskScore} className="h-2" />
-          <p className={`text-[10px] font-semibold ${getRiskColor(aiRiskScore)}`}>{getRiskLabel(aiRiskScore)}</p>
-        </div>
-        <div className="p-3 rounded-lg bg-risk-medium/10 border border-risk-medium/20">
-          <div className="flex items-center gap-2">
-            <Brain className="h-4 w-4 text-risk-medium" />
-            <span className="text-xs font-semibold text-risk-medium">AI Recommendation</span>
-          </div>
-          <p className="text-sm font-bold text-foreground mt-1">{app.recommendation}</p>
+          <InfoRow icon={<User className="h-3.5 w-3.5" />} label="Promoter" value={app.promoterGroup || "—"} />
+          <InfoRow icon={<FileCheck className="h-3.5 w-3.5" />} label="Incorporated" value={app.incorporationYear || "—"} />
+          <InfoRow icon={<Building2 className="h-3.5 w-3.5" />} label="CIBIL Score" value={String(app.cibilScore || "—")} />
         </div>
       </CardContent>
     </Card>
@@ -829,13 +1010,13 @@ function CAMSummaryCard({ app }: { app: any }) {
   return (
     <Card className="border-border/50">
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-semibold">CAM Summary & Risk Analysis</CardTitle>
-        <CardDescription className="text-xs">Key highlights from Credit Appraisal Memo</CardDescription>
+        <CardTitle className="text-sm font-semibold">CAM Summary</CardTitle>
+        <CardDescription className="text-xs">Credit Appraisal Memo highlights</CardDescription>
       </CardHeader>
       <CardContent>
-        <Accordion type="multiple" defaultValue={["financials", "risks", "fivec"]}>
+        <Accordion type="multiple" defaultValue={["financials", "fivec"]}>
           <AccordionItem value="financials">
-            <AccordionTrigger className="text-xs font-semibold py-3">Financial Highlights</AccordionTrigger>
+            <AccordionTrigger className="text-xs font-semibold py-2">Financial Highlights</AccordionTrigger>
             <AccordionContent>
               <div className="grid grid-cols-2 gap-2">
                 {[
@@ -854,30 +1035,8 @@ function CAMSummaryCard({ app }: { app: any }) {
               </div>
             </AccordionContent>
           </AccordionItem>
-          <AccordionItem value="risks">
-            <AccordionTrigger className="text-xs font-semibold py-3">Key Risk Factors</AccordionTrigger>
-            <AccordionContent>
-              <div className="space-y-2">
-                {(app.explainableAI || []).map((item: any, i: number) => (
-                  <div key={i} className={`flex items-start gap-2 p-2.5 rounded-lg border ${
-                    item.severity === "high" ? "bg-risk-high/5 border-risk-high/20" :
-                    item.severity === "medium" ? "bg-risk-medium/5 border-risk-medium/20" :
-                    "bg-risk-low/5 border-risk-low/20"
-                  }`}>
-                    <div className={`w-2 h-2 rounded-full mt-1 shrink-0 ${
-                      item.severity === "high" ? "bg-risk-high" : item.severity === "medium" ? "bg-risk-medium" : "bg-risk-low"
-                    }`} />
-                    <p className="text-xs text-muted-foreground">{item.text}</p>
-                  </div>
-                ))}
-                {(!app.explainableAI || app.explainableAI.length === 0) && (
-                  <p className="text-xs text-muted-foreground text-center py-4">No risk factors available</p>
-                )}
-              </div>
-            </AccordionContent>
-          </AccordionItem>
           <AccordionItem value="fivec">
-            <AccordionTrigger className="text-xs font-semibold py-3">Five Cs Evaluation</AccordionTrigger>
+            <AccordionTrigger className="text-xs font-semibold py-2">Five Cs Evaluation</AccordionTrigger>
             <AccordionContent>
               <div className="space-y-2">
                 {(app.fiveCsScores || []).map((c: any) => (
@@ -892,7 +1051,7 @@ function CAMSummaryCard({ app }: { app: any }) {
                   </div>
                 ))}
                 {(!app.fiveCsScores || app.fiveCsScores.length === 0) && (
-                  <p className="text-xs text-muted-foreground text-center py-4">No evaluation data</p>
+                  <p className="text-xs text-muted-foreground text-center py-3">No evaluation data</p>
                 )}
               </div>
             </AccordionContent>
@@ -926,37 +1085,27 @@ function DecisionTimeline({ decisionState }: { decisionState: DecisionState }) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {/* CO Decision */}
         <div className="flex items-center gap-3">
           <div className={`h-8 w-8 rounded-full flex items-center justify-center ${coLabel ? "bg-primary/10" : "bg-muted/30"}`}>
             <Shield className={`h-4 w-4 ${coLabel ? "text-primary" : "text-muted-foreground"}`} />
           </div>
           <div className="flex-1">
             <p className="text-[10px] text-muted-foreground">Credit Officer</p>
-            <p className={`text-xs font-semibold ${coLabel ? "text-foreground" : "text-muted-foreground"}`}>
-              {coLabel || "Pending"}
-            </p>
+            <p className={`text-xs font-semibold ${coLabel ? "text-foreground" : "text-muted-foreground"}`}>{coLabel || "Pending"}</p>
           </div>
           {coLabel && <CheckCircle2 className="h-4 w-4 text-risk-low" />}
         </div>
-
         <div className="ml-4 w-0.5 h-4 bg-border" />
-
-        {/* Manager Decision */}
         <div className="flex items-center gap-3">
           <div className={`h-8 w-8 rounded-full flex items-center justify-center ${mgrLabel ? "bg-primary/10" : "bg-muted/30"}`}>
             <Gavel className={`h-4 w-4 ${mgrLabel ? "text-primary" : "text-muted-foreground"}`} />
           </div>
           <div className="flex-1">
             <p className="text-[10px] text-muted-foreground">Manager</p>
-            <p className={`text-xs font-semibold ${mgrLabel ? "text-foreground" : "text-muted-foreground"}`}>
-              {mgrLabel || "Pending"}
-            </p>
+            <p className={`text-xs font-semibold ${mgrLabel ? "text-foreground" : "text-muted-foreground"}`}>{mgrLabel || "Pending"}</p>
           </div>
           {mgrLabel && <CheckCircle2 className="h-4 w-4 text-risk-low" />}
         </div>
-
-        {/* Final Status */}
         {decisionState.final_status && (
           <>
             <div className="ml-4 w-0.5 h-4 bg-border" />
@@ -966,10 +1115,7 @@ function DecisionTimeline({ decisionState }: { decisionState: DecisionState }) {
             </div>
           </>
         )}
-
-        {!coLabel && !mgrLabel && (
-          <p className="text-[10px] text-muted-foreground text-center py-2">No decisions recorded yet</p>
-        )}
+        {!coLabel && !mgrLabel && <p className="text-[10px] text-muted-foreground text-center py-2">No decisions recorded yet</p>}
       </CardContent>
     </Card>
   );
