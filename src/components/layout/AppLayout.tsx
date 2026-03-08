@@ -2,10 +2,10 @@ import { useState, useMemo } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
-import { Bell, Search, X, Menu, Home, FileText, Shield, BookOpen, Gavel, Brain, Building2, ChevronDown } from "lucide-react";
+import { Bell, Search, X, Building2, ChevronDown } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import { recentApplications } from "@/lib/mock-data";
 import { companyApplications } from "@/lib/company-data";
 import { useApplicationStore } from "@/store/useApplicationStore";
@@ -44,14 +44,6 @@ export function AppLayout() {
   const unreadCount = notifications.filter(n => !notifRead.includes(n.id)).length;
   const markAllRead = () => setNotifRead(notifications.map(n => n.id));
 
-  const navMenuItems = [
-    { label: "Dashboard", icon: Home, url: "/dashboard" },
-    { label: "Applications", icon: FileText, url: "/applications" },
-    { label: "Risk Engine", icon: Shield, url: "/risk-engine" },
-    { label: "CAM Generator", icon: BookOpen, url: "/cam-generator" },
-    { label: "Decision Center", icon: Gavel, url: "/decision-center" },
-    { label: "AI Research", icon: Brain, url: "/research" },
-  ];
 
   const handleSelectApp = (app: typeof companyApplications[0]) => {
     setSelectedApplication(app);
@@ -66,33 +58,8 @@ export function AppLayout() {
         <div className="flex-1 flex flex-col min-w-0">
           <header className="h-14 flex items-center justify-between border-b border-border/40 px-4 bg-card/60 backdrop-blur-xl sticky top-0 z-10">
             <div className="flex items-center gap-4 relative flex-1">
-              {/* Hamburger - Left side */}
-              <Sheet>
-                <SheetTrigger asChild>
-                  <button className="p-2 rounded-xl hover:bg-muted/50 transition-colors">
-                    <Menu className="h-4 w-4 text-muted-foreground" />
-                  </button>
-                </SheetTrigger>
-                <SheetContent side="left" className="w-72">
-                  <SheetHeader>
-                    <SheetTitle className="text-sm">Navigation</SheetTitle>
-                  </SheetHeader>
-                  <div className="mt-4 space-y-1">
-                    {navMenuItems.map((item) => (
-                      <button
-                        key={item.label}
-                        onClick={() => navigate(item.url)}
-                        className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm transition-colors ${
-                          location.pathname === item.url ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                        }`}
-                      >
-                        <item.icon className="h-4 w-4" />
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
-                </SheetContent>
-              </Sheet>
+              {/* Sidebar Toggle */}
+              <SidebarTrigger className="h-8 w-8 shrink-0" />
               {/* Search */}
               <div className="hidden md:flex items-center gap-2 bg-muted/40 rounded-xl px-3.5 py-2 w-72 border border-border/30 focus-within:border-primary/40 transition-colors">
                 <Search className="h-3.5 w-3.5 text-muted-foreground" />
