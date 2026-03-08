@@ -73,7 +73,7 @@ function mapDbToSelectorApp(db: any): CompanyApplication {
 export function AppLayout() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
-  const [notifRead, setNotifRead] = useState<number[]>(notifications.filter(n => n.read).map(n => n.id));
+  const [notifs, setNotifs] = useState<Notification[]>(mockNotifications);
   const [appSelectorOpen, setAppSelectorOpen] = useState(false);
   const [dbApps, setDbApps] = useState<CompanyApplication[]>([]);
   const [loadingApps, setLoadingApps] = useState(false);
