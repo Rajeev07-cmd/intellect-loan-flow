@@ -1,11 +1,122 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { FileText, AlertTriangle, TrendingUp, IndianRupee, XCircle, Eye, Gavel, Shield, BarChart3 } from "lucide-react";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { RiskBadge } from "@/components/ui/risk-badge";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { kpiData, recentApplications, riskDistribution, sectorExposure, monthlyTrend } from "@/lib/mock-data";
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from "recharts";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useNavigate } from "react-router-dom";
+
+const heatmapData = [
+  { sector: "Steel & Metals", low: 2, medium: 4, high: 3, exposure: 950 },
+  { sector: "IT Services", low: 5, medium: 2, high: 0, exposure: 680 },
+  { sector: "Petrochemicals", low: 3, medium: 3, high: 2, exposure: 1200 },
+  { sector: "Infrastructure", low: 1, medium: 2, high: 4, exposure: 780 },
+  { sector: "NBFC", low: 4, medium: 3, high: 1, exposure: 560 },
+  { sector: "Housing Finance", low: 6, medium: 1, high: 0, exposure: 900 },
+  { sector: "Mining", low: 1, medium: 1, high: 3, exposure: 420 },
+  { sector: "Pharma", low: 4, medium: 2, high: 1, exposure: 350 },
+];
+
+const riskLevels = ["low", "medium", "high"] as const;
+
+function getCellColor(level: typeof riskLevels[number], count: number) {
+  const intensity = Math.min(count / 6, 1);
+  if (level === "low") return `hsla(var(--risk-low) / ${0.15 + intensity * 0.7})`;
+  if (level === "medium") return `hsla(var(--risk-medium) / ${0.15 + intensity * 0.7})`;
+  return `hsla(var(--risk-high) / ${0.15 + intensity * 0.7})`;
+}
+
+function getCellTextColor(level: typeof riskLevels[number], count: number) {
+  if (count === 0) return "hsl(var(--muted-foreground))";
+  const intensity = Math.min(count / 6, 1);
+  if (intensity > 0.5) return "hsl(0 0% 100%)";
+  if (level === "low") return "hsl(var(--risk-low))";
+  if (level === "medium") return "hsl(var(--risk-medium))";
+  return "hsl(var(--risk-high))";
+}
+
+function PortfolioRiskHeatmap() {
+  const [hoveredCell, setHoveredCell] = useState<string | null>(null);
+
+  const totalExposure = heatmapData.reduce((s, d) => s + d.exposure, 0);
+
+  return (
+    <TooltipProvider delayDuration={0}>
+      <div className="space-y-3">
+        {/* Header */}
+        <div className="grid grid-cols-[140px_1fr_1fr_1fr_80px] gap-1.5 items-center">
+          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Sector</div>
+          {riskLevels.map(level => (
+            <div key={level} className="text-center text-[10px] font-semibold uppercase tracking-wider" style={{ color: `hsl(var(--risk-${level}))` }}>
+              {level} Risk
+            </div>
+          ))}
+          <div className="text-right text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Exposure</div>
+        </div>
+
+        {/* Rows */}
+        {heatmapData.map((row, ri) => (
+          <motion.div
+            key={row.sector}
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: ri * 0.04 }}
+            className="grid grid-cols-[140px_1fr_1fr_1fr_80px] gap-1.5 items-center"
+          >
+            <div className="text-xs font-medium text-foreground truncate">{row.sector}</div>
+            {riskLevels.map(level => {
+              const count = row[level];
+              const cellKey = `${row.sector}-${level}`;
+              return (
+                <Tooltip key={level}>
+                  <TooltipTrigger asChild>
+                    <motion.div
+                      whileHover={{ scale: 1.08 }}
+                      onMouseEnter={() => setHoveredCell(cellKey)}
+                      onMouseLeave={() => setHoveredCell(null)}
+                      className="relative h-10 rounded-md flex items-center justify-center cursor-pointer transition-shadow"
+                      style={{
+                        backgroundColor: getCellColor(level, count),
+                        boxShadow: hoveredCell === cellKey ? `0 0 12px ${getCellColor(level, count)}` : "none",
+                      }}
+                    >
+                      <span className="text-sm font-bold" style={{ color: getCellTextColor(level, count) }}>
+                        {count}
+                      </span>
+                    </motion.div>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">
+                    <p className="font-semibold">{row.sector}</p>
+                    <p>{count} {level}-risk accounts</p>
+                    <p className="text-muted-foreground">₹{row.exposure} Cr total exposure</p>
+                  </TooltipContent>
+                </Tooltip>
+              );
+            })}
+            <div className="text-right text-xs font-medium text-muted-foreground">₹{row.exposure} Cr</div>
+          </motion.div>
+        ))}
+
+        {/* Legend / Summary */}
+        <div className="flex items-center justify-between pt-3 border-t border-border/50">
+          <div className="flex items-center gap-4">
+            {riskLevels.map(level => (
+              <div key={level} className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: getCellColor(level, 4) }} />
+                <span className="text-[10px] text-muted-foreground capitalize">{level}</span>
+              </div>
+            ))}
+            <span className="text-[10px] text-muted-foreground ml-2">Darker = Higher concentration</span>
+          </div>
+          <div className="text-xs font-semibold text-foreground">Total: ₹{totalExposure.toLocaleString()} Cr</div>
+        </div>
+      </div>
+    </TooltipProvider>
+  );
+}
 
 export default function ManagerDashboard() {
   const navigate = useNavigate();
@@ -48,7 +159,7 @@ export default function ManagerDashboard() {
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis dataKey="month" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--popover-foreground))", fontSize: 12 }} />
+              <RechartsTooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--popover-foreground))", fontSize: 12 }} />
               <Bar dataKey="approved" fill="hsl(var(--risk-low))" radius={[4, 4, 0, 0]} />
               <Bar dataKey="rejected" fill="hsl(var(--risk-high))" radius={[4, 4, 0, 0]} />
               <Bar dataKey="pending" fill="hsl(var(--risk-medium))" radius={[4, 4, 0, 0]} />
@@ -65,7 +176,7 @@ export default function ManagerDashboard() {
                   <Cell key={i} fill={entry.fill} />
                 ))}
               </Pie>
-              <Tooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--popover-foreground))", fontSize: 12 }} />
+              <RechartsTooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--popover-foreground))", fontSize: 12 }} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
             </PieChart>
           </ResponsiveContainer>
@@ -80,7 +191,7 @@ export default function ManagerDashboard() {
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
             <XAxis type="number" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} axisLine={false} tickLine={false} />
             <YAxis dataKey="name" type="category" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} axisLine={false} tickLine={false} width={110} />
-            <Tooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--popover-foreground))", fontSize: 12 }} />
+            <RechartsTooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--popover-foreground))", fontSize: 12 }} />
             <Bar dataKey="value" radius={[0, 4, 4, 0]}>
               {sectorExposure.map((entry, i) => (
                 <Cell key={i} fill={entry.fill} />
@@ -88,6 +199,15 @@ export default function ManagerDashboard() {
             </Bar>
           </BarChart>
         </ResponsiveContainer>
+      </motion.div>
+
+      {/* Portfolio Risk Heatmap */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38 }} className="glass-card p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold text-foreground">Portfolio Risk Heatmap</h3>
+          <p className="text-[10px] text-muted-foreground">Sector × Risk Level Concentration</p>
+        </div>
+        <PortfolioRiskHeatmap />
       </motion.div>
 
       {/* Loan Approval Queue */}
