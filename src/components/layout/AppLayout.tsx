@@ -134,7 +134,7 @@ export function AppLayout() {
   const unreadCount = notifs.filter(n => !n.is_read).length;
   const markAllRead = async () => {
     setNotifs(prev => prev.map(n => ({ ...n, is_read: true })));
-    await markAllNotificationsRead();
+    await markAllNotificationsRead(notifRole);
   };
 
   const handleSelectApp = (app: CompanyApplication) => {
