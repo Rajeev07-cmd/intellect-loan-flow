@@ -1,15 +1,7 @@
 import { motion } from "framer-motion";
-import { Linkedin } from "lucide-react";
+import { Linkedin, Github } from "lucide-react";
 
 const developers = [
-  {
-    name: "Rajeev Pichika",
-    role: "Full Stack Developer",
-    description: "Architecting the end-to-end platform from data pipelines to decision dashboards.",
-    initials: "RP",
-    color: "from-primary/30 to-chart-4/30",
-    linkedin: "https://www.linkedin.com/in/rajeev-pichika-8b58a8309",
-  },
   {
     name: "Tarun Kumar Choudhury",
     role: "Backend & AI Developer",
@@ -17,6 +9,16 @@ const developers = [
     initials: "TC",
     color: "from-chart-4/30 to-chart-2/30",
     linkedin: "https://www.linkedin.com/in/tarunkumarchoudhury",
+    github: "https://github.com/tarunkumarchoudhury",
+  },
+  {
+    name: "Pichika Rajeev",
+    role: "Full Stack Developer",
+    description: "Architecting the end-to-end platform from data pipelines to decision dashboards.",
+    initials: "PR",
+    color: "from-primary/30 to-chart-4/30",
+    linkedin: "https://www.linkedin.com/in/rajeev-pichika-8b58a8309",
+    github: "https://github.com/rajeevpichika",
   },
   {
     name: "Sudeepa Mund",
@@ -25,14 +27,16 @@ const developers = [
     initials: "SM",
     color: "from-chart-2/30 to-primary/30",
     linkedin: "https://www.linkedin.com/in/sudeepa-mund",
+    github: "https://github.com/sudeepamund",
   },
   {
     name: "Subhankar Rath",
-    role: "UI/UX Designer",
-    description: "Designing intuitive workflows and enterprise-grade visual experiences.",
+    role: "ML Engineer",
+    description: "Engineering machine learning pipelines and predictive models for credit risk assessment.",
     initials: "SR",
     color: "from-primary/30 to-chart-1/30",
     linkedin: "https://www.linkedin.com/in/subhankar-rath-2a369b274",
+    github: "https://github.com/subhankarrath",
   },
 ];
 
