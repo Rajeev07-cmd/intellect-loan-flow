@@ -64,8 +64,8 @@ export default function DecisionCenter() {
     setRiskAdjustment([0]);
     setSelectedReasons([]);
 
-    // Load audit trail for this application
-    const loadAudit = async () => {
+    // Load audit trail and decision state
+    const loadData = async () => {
       const isUUID = /^[0-9a-f]{8}-/i.test(selectedApplication.id);
       if (!isUUID) {
         setAuditTrail([
@@ -76,6 +76,14 @@ export default function DecisionCenter() {
         return;
       }
       try {
+        // Load decision state
+        const ds = await getDecisionState(selectedApplication.id);
+        setDecisionState(ds);
+        if (ds.manager_decision) {
+          setSubmitted(true);
+          setDecision(ds.manager_decision === "approve" ? "approve" : ds.manager_decision === "reject" ? "reject" : "re-review");
+        }
+
         const { data } = await supabase
           .from("audit_logs")
           .select("*")
@@ -97,7 +105,7 @@ export default function DecisionCenter() {
         setAuditTrail([]);
       }
     };
-    loadAudit();
+    loadData();
   }, [selectedApplication]);
 
   if (!selectedApplication) return <NoApplicationSelected />;
