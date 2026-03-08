@@ -46,7 +46,9 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/reset-password" element={<ResetPassword />} />
-              <Route element={<ProtectedRoute />}>
+
+              {/* Credit Officer routes */}
+              <Route element={<ProtectedRoute allowedRoles={["credit_officer", "admin"]} />}>
                 <Route element={<AppLayout />}>
                   <Route path="/dashboard" element={<CreditOfficerDashboard />} />
                   <Route path="/applications" element={<Applications />} />
@@ -54,12 +56,25 @@ const App = () => (
                   <Route path="/risk-engine" element={<RiskEngine />} />
                   <Route path="/cam-generator" element={<CamGenerator />} />
                   <Route path="/tracking" element={<Tracking />} />
-                  <Route path="/decision-center" element={<DecisionCenter />} />
                   <Route path="/research" element={<AIResearch />} />
+                </Route>
+              </Route>
+
+              {/* Manager routes */}
+              <Route element={<ProtectedRoute allowedRoles={["manager", "admin"]} />}>
+                <Route element={<AppLayout />}>
                   <Route path="/manager-dashboard" element={<ManagerDashboard />} />
+                  <Route path="/decision-center" element={<DecisionCenter />} />
+                </Route>
+              </Route>
+
+              {/* Admin routes */}
+              <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
+                <Route element={<AppLayout />}>
                   <Route path="/admin/users" element={<AdminSettings />} />
                 </Route>
               </Route>
+
               <Route path="/credit-officer/*" element={<Navigate to="/dashboard" replace />} />
               <Route path="/manager/*" element={<Navigate to="/manager-dashboard" replace />} />
               <Route path="*" element={<NotFound />} />
