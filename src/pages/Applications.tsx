@@ -52,15 +52,9 @@ function mapDbToApp(db: DbApplication): CompanyApplication {
     promoterGroup: db.promoter_group || "N/A",
     cibilScore: db.cibil_score ?? 700,
     financials: {
-      revenue: "₹0 Cr",
-      outstandingDebt: "₹0 Cr",
-      dscr: 1.5,
-      debtEquity: 1.0,
-      relatedPartyTransactions: "₹0 Cr",
-      gstMismatch: false,
-      gstMismatchAmount: "₹0",
-      interestCoverage: 2.0,
-      currentRatio: 1.5,
+      revenue: "₹0 Cr", outstandingDebt: "₹0 Cr", dscr: 1.5, debtEquity: 1.0,
+      relatedPartyTransactions: "₹0 Cr", gstMismatch: false, gstMismatchAmount: "₹0",
+      interestCoverage: 2.0, currentRatio: 1.5,
     },
     fiveCsScores: [
       { name: "Character", score: 70, weight: 20, contribution: 14, explanation: "Pending analysis" },
@@ -101,9 +95,6 @@ export default function Applications() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const role = localStorage.getItem("userRole") || "credit-officer";
-  const prefix = role === "manager" ? "/manager" : "/credit-officer";
-
   const fetchApplications = useCallback(async () => {
     setLoading(true);
     try {
@@ -132,7 +123,6 @@ export default function Applications() {
     fetchApplications();
   }, [fetchApplications]);
 
-  // Combine DB apps with mock data (DB first)
   const allApplications = usingDb 
     ? [...dbApplications, ...companyApplications]
     : companyApplications;
@@ -150,7 +140,7 @@ export default function Applications() {
 
   const handleSelectApp = (app: CompanyApplication) => {
     setSelectedApplication(app);
-    navigate(`${prefix}/document-verification`);
+    navigate("/document-verification");
   };
 
   const statusCounts = {
@@ -164,8 +154,8 @@ export default function Applications() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Applications Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-1">Select an application to begin credit analysis</p>
+          <h1 className="text-2xl font-bold text-foreground">Applications</h1>
+          <p className="text-sm text-muted-foreground mt-1">Select an application to begin credit analysis workflow</p>
         </div>
         <div className="flex items-center gap-2">
           {usingDb && (
@@ -174,12 +164,10 @@ export default function Applications() {
             </Badge>
           )}
           <Button variant="outline" size="sm" onClick={fetchApplications} disabled={loading} className="gap-2">
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
           </Button>
           <Button size="sm" onClick={() => setShowNewModal(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
-            New Application
+            <Plus className="h-4 w-4" /> New Application
           </Button>
         </div>
       </div>
@@ -266,9 +254,7 @@ export default function Applications() {
                   <TableCell><RiskBadge score={app.riskScore} label={`${app.riskScore}`} size="md" /></TableCell>
                   <TableCell><StatusBadge status={app.status} /></TableCell>
                   <TableCell className="text-sm font-medium text-foreground">₹{app.loanAmount} Cr</TableCell>
-                  <TableCell>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                  </TableCell>
+                  <TableCell><ChevronRight className="h-4 w-4 text-muted-foreground" /></TableCell>
                 </TableRow>
               ))}
             </TableBody>
