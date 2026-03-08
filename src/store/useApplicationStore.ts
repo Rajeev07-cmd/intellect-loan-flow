@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 export interface CompanyApplication {
   id: string;
@@ -78,8 +79,15 @@ interface ApplicationStore {
   clearSelectedApplication: () => void;
 }
 
-export const useApplicationStore = create<ApplicationStore>((set) => ({
-  selectedApplication: null,
-  setSelectedApplication: (app) => set({ selectedApplication: app }),
-  clearSelectedApplication: () => set({ selectedApplication: null }),
-}));
+export const useApplicationStore = create<ApplicationStore>()(
+  persist(
+    (set) => ({
+      selectedApplication: null,
+      setSelectedApplication: (app) => set({ selectedApplication: app }),
+      clearSelectedApplication: () => set({ selectedApplication: null }),
+    }),
+    {
+      name: "intelli-credit-selected-app",
+    }
+  )
+);
