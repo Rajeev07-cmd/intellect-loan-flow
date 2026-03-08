@@ -175,7 +175,6 @@ export default function DocumentVerification() {
     if (!selectedApplication) return;
 
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
 
     // Determine document type from file name
     let docType = "Other";
@@ -189,7 +188,7 @@ export default function DocumentVerification() {
     await supabase.from("documents").insert({
       id: docId,
       application_id: selectedApplication.id,
-      user_id: user.id,
+      user_id: user?.id || null,
       document_name: fileName,
       document_type: docType,
       file_path: fileUrl,
