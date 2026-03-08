@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RiskBadge } from "@/components/ui/risk-badge";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { companyApplications } from "@/lib/company-data";
 import { useApplicationStore, type CompanyApplication } from "@/store/useApplicationStore";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -87,9 +86,8 @@ export default function Applications() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sectorFilter, setSectorFilter] = useState("All");
   const [showNewModal, setShowNewModal] = useState(false);
-  const [dbApplications, setDbApplications] = useState<CompanyApplication[]>([]);
+  const [applications, setApplications] = useState<CompanyApplication[]>([]);
   const [loading, setLoading] = useState(true);
-  const [usingDb, setUsingDb] = useState(false);
   
   const { setSelectedApplication } = useApplicationStore();
   const navigate = useNavigate();
@@ -104,16 +102,10 @@ export default function Applications() {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-
-      if (data && data.length > 0) {
-        setDbApplications(data.map(mapDbToApp));
-        setUsingDb(true);
-      } else {
-        setUsingDb(false);
-      }
+      setApplications((data || []).map(mapDbToApp));
     } catch (error) {
-      console.log("Using mock data:", error);
-      setUsingDb(false);
+      console.error("Error fetching applications:", error);
+      setApplications([]);
     } finally {
       setLoading(false);
     }
@@ -121,15 +113,18 @@ export default function Applications() {
 
   useEffect(() => {
     fetchApplications();
+
+    const channel = supabase
+      .channel("applications_list")
+      .on("postgres_changes", { event: "*", schema: "public", table: "applications" }, () => fetchApplications())
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [fetchApplications]);
 
-  const allApplications = usingDb 
-    ? [...dbApplications, ...companyApplications]
-    : companyApplications;
+  const sectors = ["All", ...Array.from(new Set(applications.map(a => a.sector)))];
 
-  const sectors = ["All", ...Array.from(new Set(allApplications.map(a => a.sector)))];
-
-  const filtered = allApplications.filter(app => {
+  const filtered = applications.filter(app => {
     const matchesSearch = !searchQuery ||
       app.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
       app.cin.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -144,10 +139,10 @@ export default function Applications() {
   };
 
   const statusCounts = {
-    total: allApplications.length,
-    approved: allApplications.filter(a => a.status === "Approved").length,
-    review: allApplications.filter(a => a.status === "Under Review" || a.status === "Pending" || a.status === "Application Created").length,
-    high: allApplications.filter(a => a.status === "High Risk" || a.status === "Rejected").length,
+    total: applications.length,
+    approved: applications.filter(a => a.status === "Approved").length,
+    review: applications.filter(a => ["Under Review", "Pending", "Application Created"].includes(a.status)).length,
+    high: applications.filter(a => a.status === "High Risk" || a.status === "Rejected").length,
   };
 
   return (
@@ -158,7 +153,7 @@ export default function Applications() {
           <p className="text-sm text-muted-foreground mt-1">Select an application to begin credit analysis workflow</p>
         </div>
         <div className="flex items-center gap-2">
-          {usingDb && (
+          {applications.length > 0 && (
             <Badge variant="outline" className="gap-1.5 text-xs text-risk-low border-risk-low/30">
               <Database className="h-3 w-3" /> Live data
             </Badge>
@@ -262,7 +257,10 @@ export default function Applications() {
         )}
         {!loading && filtered.length === 0 && (
           <div className="py-12 text-center">
-            <p className="text-sm text-muted-foreground">No applications match your search.</p>
+            <p className="text-sm text-muted-foreground">No applications found. Create a new loan application to begin.</p>
+            <Button size="sm" className="mt-4 gap-2" onClick={() => setShowNewModal(true)}>
+              <Plus className="h-4 w-4" /> Create Application
+            </Button>
           </div>
         )}
       </motion.div>

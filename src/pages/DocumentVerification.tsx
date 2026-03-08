@@ -27,7 +27,7 @@ interface DocFile {
   file_url?: string;
 }
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ALLOWED_TYPES = [
   "application/pdf",
   "image/png",
@@ -68,24 +68,11 @@ export default function DocumentVerification() {
   const [dragOver, setDragOver] = useState(false);
   const [dbConnected, setDbConnected] = useState(false);
 
-  // Load existing documents from Supabase
+  // Load documents from Supabase
   useEffect(() => {
     if (!selectedApplication) return;
 
     const loadDocuments = async () => {
-      // Check if the ID is a valid UUID (DB apps) vs mock ID like "APP-001"
-      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(selectedApplication.id);
-      
-      if (!isUUID) {
-        // Mock application - just use mock docs
-        const mockDocs = (selectedApplication.documents || []).map(d => ({
-          ...d,
-          progress: 100,
-        }));
-        setDocs(mockDocs);
-        return;
-      }
-
       try {
         const { data, error } = await supabase
           .from("documents")
@@ -104,22 +91,11 @@ export default function DocumentVerification() {
             progress: 100,
             file_url: d.file_url || undefined,
           }));
-          
-          // Merge with mock docs from selected app
-          const mockDocs = (selectedApplication.documents || []).map(d => ({
-            ...d,
-            progress: 100,
-          }));
-          
-          setDocs([...dbDocs, ...mockDocs]);
+          setDocs(dbDocs);
         }
       } catch (e) {
-        console.log("Using mock documents");
-        const mockDocs = (selectedApplication.documents || []).map(d => ({
-          ...d,
-          progress: 100,
-        }));
-        setDocs(mockDocs);
+        console.log("Error loading documents:", e);
+        setDocs([]);
       }
     };
 
@@ -127,40 +103,22 @@ export default function DocumentVerification() {
   }, [selectedApplication]);
 
   const validateFile = (file: File): string | null => {
-    if (file.size > MAX_FILE_SIZE) {
-      return `File "${file.name}" exceeds 10MB limit`;
-    }
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      return `File "${file.name}" has invalid type. Allowed: PDF, PNG, JPG, DOCX`;
-    }
+    if (file.size > MAX_FILE_SIZE) return `File "${file.name}" exceeds 10MB limit`;
+    if (!ALLOWED_TYPES.includes(file.type)) return `File "${file.name}" has invalid type. Allowed: PDF, PNG, JPG, DOCX`;
     return null;
   };
 
   const uploadToSupabase = async (file: File, docId: string): Promise<string | null> => {
     if (!selectedApplication) return null;
-
     const filePath = `${selectedApplication.id}/${Date.now()}_${file.name}`;
-    
-    // Simulate progress since Supabase JS doesn't support onUploadProgress
     const progressInterval = setInterval(() => {
-      setDocs(prev => prev.map(d => 
-        d.id === docId && d.progress < 90 ? { ...d, progress: d.progress + 10 } : d
-      ));
+      setDocs(prev => prev.map(d => d.id === docId && d.progress < 90 ? { ...d, progress: d.progress + 10 } : d));
     }, 200);
-
     try {
-      const { data, error } = await supabase.storage
-        .from("documents")
-        .upload(filePath, file);
-
+      const { data, error } = await supabase.storage.from("documents").upload(filePath, file);
       clearInterval(progressInterval);
-
       if (error) throw error;
-
-      const { data: urlData } = supabase.storage
-        .from("documents")
-        .getPublicUrl(data.path);
-
+      const { data: urlData } = supabase.storage.from("documents").getPublicUrl(data.path);
       return urlData.publicUrl;
     } catch (error) {
       clearInterval(progressInterval);
@@ -168,17 +126,9 @@ export default function DocumentVerification() {
     }
   };
 
-  const saveDocumentMetadata = async (
-    docId: string, 
-    fileName: string, 
-    fileUrl: string, 
-    fileSize: string
-  ) => {
+  const saveDocumentMetadata = async (docId: string, fileName: string, fileUrl: string, fileSize: string) => {
     if (!selectedApplication) return;
-
     const { data: { user } } = await supabase.auth.getUser();
-
-    // Determine document type from file name
     let docType = "Other";
     const lowerName = fileName.toLowerCase();
     if (lowerName.includes("pan")) docType = "PAN Card";
@@ -186,7 +136,6 @@ export default function DocumentVerification() {
     else if (lowerName.includes("cin") || lowerName.includes("incorporation")) docType = "Certificate of Incorporation";
     else if (lowerName.includes("financial") || lowerName.includes("annual")) docType = "Financial Statement";
     else if (lowerName.includes("director") || lowerName.includes("kyc")) docType = "Director KYC";
-
     await supabase.from("documents").insert({
       id: docId,
       application_id: selectedApplication.id,
@@ -202,20 +151,12 @@ export default function DocumentVerification() {
 
   const handleFiles = useCallback(async (files: File[]) => {
     if (!selectedApplication || files.length === 0) return;
-
-    // Validate all files first
     for (const file of files) {
       const error = validateFile(file);
-      if (error) {
-        toast({ title: "Upload Error", description: error, variant: "destructive" });
-        return;
-      }
+      if (error) { toast({ title: "Upload Error", description: error, variant: "destructive" }); return; }
     }
-
     setUploading(true);
-
-    // Add placeholder docs
-    const newDocs: DocFile[] = files.map((f, i) => ({
+    const newDocs: DocFile[] = files.map((f) => ({
       id: crypto.randomUUID(),
       name: f.name,
       type: "Uploaded Document",
@@ -223,87 +164,35 @@ export default function DocumentVerification() {
       status: "uploading" as const,
       progress: 0,
     }));
-
     setDocs(prev => [...newDocs, ...prev]);
-
-    // Upload each file
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const docId = newDocs[i].id;
-
       try {
-        // Upload to Supabase storage
         const fileUrl = await uploadToSupabase(file, docId);
-
         if (fileUrl) {
-          // Save metadata to database
           await saveDocumentMetadata(docId, file.name, fileUrl, newDocs[i].size);
           setDbConnected(true);
         }
-
-        // Update status to pending (awaiting verification)
-        setDocs(prev => prev.map(d => 
-          d.id === docId 
-            ? { ...d, status: "pending" as const, progress: 100, file_url: fileUrl || undefined } 
-            : d
-        ));
-
-        // Log audit event
-        const isUUID = /^[0-9a-f]{8}-/i.test(selectedApplication!.id);
-        if (isUUID) {
-          await logAuditEvent("Document Uploaded", `${file.name} uploaded`, selectedApplication!.id, "Credit Officer");
-        }
-
-        toast({ 
-          title: "Upload Complete", 
-          description: `${file.name} uploaded successfully` 
-        });
+        setDocs(prev => prev.map(d => d.id === docId ? { ...d, status: "pending" as const, progress: 100, file_url: fileUrl || undefined } : d));
+        await logAuditEvent("Document Uploaded", `${file.name} uploaded`, selectedApplication!.id, "Credit Officer");
+        toast({ title: "Upload Complete", description: `${file.name} uploaded successfully` });
       } catch (error: any) {
         console.error("Upload error:", error);
-        setDocs(prev => prev.map(d => 
-          d.id === docId ? { ...d, status: "failed" as const, progress: 0 } : d
-        ));
-        toast({ 
-          title: "Upload Failed", 
-          description: error.message || `Failed to upload ${file.name}`, 
-          variant: "destructive" 
-        });
+        setDocs(prev => prev.map(d => d.id === docId ? { ...d, status: "failed" as const, progress: 0 } : d));
+        toast({ title: "Upload Failed", description: error.message || `Failed to upload ${file.name}`, variant: "destructive" });
       }
     }
-
     setUploading(false);
   }, [selectedApplication, toast]);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-    const files = Array.from(e.dataTransfer.files);
-    handleFiles(files);
-  }, [handleFiles]);
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(true);
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-  }, []);
-
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    handleFiles(files);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  }, [handleFiles]);
+  const handleDrop = useCallback((e: React.DragEvent) => { e.preventDefault(); setDragOver(false); handleFiles(Array.from(e.dataTransfer.files)); }, [handleFiles]);
+  const handleDragOver = useCallback((e: React.DragEvent) => { e.preventDefault(); setDragOver(true); }, []);
+  const handleDragLeave = useCallback((e: React.DragEvent) => { e.preventDefault(); setDragOver(false); }, []);
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => { handleFiles(Array.from(e.target.files || [])); if (fileInputRef.current) fileInputRef.current.value = ""; }, [handleFiles]);
 
   const removeDoc = useCallback(async (id: string) => {
-    // Try to delete from Supabase
-    try {
-      await supabase.from("documents").delete().eq("id", id);
-    } catch (e) {
-      // Ignore if not in DB
-    }
+    try { await supabase.from("documents").delete().eq("id", id); } catch (e) {}
     setDocs(prev => prev.filter(d => d.id !== id));
     toast({ title: "Removed", description: "Document removed." });
   }, [toast]);
@@ -319,38 +208,19 @@ export default function DocumentVerification() {
   const runFullVerification = useCallback(async () => {
     setVerifying(true);
     toast({ title: "Verification Started", description: "Running full document verification..." });
-
-    // Simulate verification with progress
     await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // Update all pending docs to verified
-    setDocs(prev => prev.map(d => 
-      d.status === "pending" ? { ...d, status: "verified" as const } : d
-    ));
-
-    // Update documents in Supabase
+    setDocs(prev => prev.map(d => d.status === "pending" ? { ...d, status: "verified" as const } : d));
     const pendingIds = docs.filter(d => d.status === "pending").map(d => d.id);
     if (pendingIds.length > 0) {
       try {
-        await supabase
-          .from("documents")
-          .update({ verification_status: "verified" })
-          .in("id", pendingIds);
-      } catch (e) {
-        // Ignore DB errors
-      }
+        await supabase.from("documents").update({ verification_status: "verified" }).in("id", pendingIds);
+      } catch (e) {}
     }
-
-    // Log audit event
-    const isUUID = /^[0-9a-f]{8}-/i.test(selectedApplication!.id);
-    if (isUUID) {
-      await logAuditEvent("Verification Completed", "All documents verified", selectedApplication!.id, "System");
-      await createNotification("Verification Complete", `Document verification completed for ${selectedApplication!.company}`, "info", selectedApplication!.id);
-    }
-
+    await logAuditEvent("Verification Completed", "All documents verified", selectedApplication!.id, "System");
+    await createNotification("Verification Complete", `Document verification completed for ${selectedApplication!.company}`, "info", selectedApplication!.id);
     setVerifying(false);
     toast({ title: "Complete", description: "All pending documents verified." });
-  }, [toast, docs]);
+  }, [toast, docs, selectedApplication]);
 
   if (!selectedApplication) return <NoApplicationSelected />;
 
@@ -364,7 +234,6 @@ export default function DocumentVerification() {
   return (
     <div className="space-y-6 animate-slide-up">
       <ActiveApplicationBanner />
-
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Document Verification</h1>
@@ -419,38 +288,20 @@ export default function DocumentVerification() {
                 <CardDescription className="text-xs">Drag & drop or click to upload (Max 10MB)</CardDescription>
               </CardHeader>
               <CardContent>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  accept=".pdf,.png,.jpg,.jpeg,.docx"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
+                <input ref={fileInputRef} type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.docx" onChange={handleFileSelect} className="hidden" />
                 <div 
-                  onDragOver={handleDragOver} 
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
+                  onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
                   onClick={() => fileInputRef.current?.click()}
                   className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
-                    dragOver 
-                      ? "border-primary bg-primary/10" 
-                      : "border-border/50 hover:border-primary/30 hover:bg-muted/30"
+                    dragOver ? "border-primary bg-primary/10" : "border-border/50 hover:border-primary/30 hover:bg-muted/30"
                   }`}
                 >
                   {uploading ? (
-                    <>
-                      <Loader2 className="h-8 w-8 mx-auto text-primary mb-3 animate-spin" />
-                      <p className="text-sm text-primary font-medium">Uploading...</p>
-                    </>
+                    <><Loader2 className="h-8 w-8 mx-auto text-primary mb-3 animate-spin" /><p className="text-sm text-primary font-medium">Uploading...</p></>
                   ) : (
-                    <>
-                      <CloudUpload className={`h-8 w-8 mx-auto mb-3 ${dragOver ? 'text-primary' : 'text-muted-foreground'}`} />
-                      <p className="text-sm text-foreground font-medium">
-                        {dragOver ? "Drop files here" : "Drop files or click to browse"}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">PDF, PNG, JPG, DOCX up to 10MB</p>
-                    </>
+                    <><CloudUpload className={`h-8 w-8 mx-auto mb-3 ${dragOver ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <p className="text-sm text-foreground font-medium">{dragOver ? "Drop files here" : "Drop files or click to browse"}</p>
+                    <p className="text-xs text-muted-foreground mt-1">PDF, PNG, JPG, DOCX up to 10MB</p></>
                   )}
                 </div>
               </CardContent>
@@ -462,44 +313,35 @@ export default function DocumentVerification() {
                 <div className="space-y-2 max-h-[400px] overflow-y-auto">
                   <AnimatePresence>
                     {docs.length === 0 ? (
-                      <div className="text-center py-8 text-sm text-muted-foreground">
-                        No documents uploaded yet
-                      </div>
-                    ) : (
-                      docs.map((doc) => (
-                        <motion.div key={doc.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                          className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors group"
-                        >
-                          {getFileIcon(doc.name)}
-                          <div className="flex-1 min-w-0">
+                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-8 text-center">
+                        <File className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                        <p className="text-sm text-muted-foreground">No documents uploaded yet</p>
+                        <p className="text-xs text-muted-foreground mt-1">Upload documents to begin verification</p>
+                      </motion.div>
+                    ) : docs.map((doc) => (
+                      <motion.div key={doc.id} layout initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
+                        className="flex items-center gap-3 p-3 rounded-xl bg-muted/20 border border-border/20"
+                      >
+                        {getFileIcon(doc.name)}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
                             <p className="text-sm font-medium text-foreground truncate">{doc.name}</p>
-                            <div className="flex items-center gap-2">
-                              <p className="text-[10px] text-muted-foreground">{doc.type} · {doc.size}</p>
-                              {doc.status === "uploading" && doc.progress > 0 && doc.progress < 100 && (
-                                <span className="text-[10px] text-primary">{doc.progress}%</span>
-                              )}
-                            </div>
-                            {doc.status === "uploading" && (
-                              <Progress value={doc.progress} className="h-1 mt-1.5" />
-                            )}
+                            <Badge variant="outline" className="text-[9px] shrink-0">{doc.type}</Badge>
                           </div>
-                          <Badge variant="secondary" className={`text-[10px] ${
-                            doc.status === "verified" ? "bg-risk-low/15 text-risk-low" :
-                            doc.status === "pending" ? "bg-risk-medium/15 text-risk-medium" :
-                            doc.status === "uploading" ? "bg-primary/15 text-primary" :
-                            "bg-risk-high/15 text-risk-high"
-                          }`}>
-                            {doc.status === "verified" ? "✔ Verified" : doc.status === "pending" ? "⚠ Pending" : doc.status === "uploading" ? "⏳ Uploading" : "❌ Failed"}
-                          </Badge>
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            {doc.status === "failed" && (
-                              <button className="p-1.5 rounded-md hover:bg-muted/50" onClick={() => retryDoc(doc.id)}><RotateCcw className="h-3.5 w-3.5 text-muted-foreground" /></button>
-                            )}
-                            <button className="p-1.5 rounded-md hover:bg-muted/50" onClick={() => removeDoc(doc.id)}><Trash2 className="h-3.5 w-3.5 text-muted-foreground" /></button>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[10px] text-muted-foreground">{doc.size}</span>
+                            {doc.status === "uploading" && <Progress value={doc.progress} className="h-1 w-20" />}
                           </div>
-                        </motion.div>
-                      ))
-                    )}
+                        </div>
+                        <StatusIcon status={doc.status} />
+                        <div className="flex items-center gap-1">
+                          {doc.status === "failed" && (
+                            <button onClick={() => retryDoc(doc.id)} className="p-1 rounded-md hover:bg-muted/50 text-muted-foreground hover:text-foreground"><RotateCcw className="h-3.5 w-3.5" /></button>
+                          )}
+                          <button onClick={() => removeDoc(doc.id)} className="p-1 rounded-md hover:bg-risk-high/10 text-muted-foreground hover:text-risk-high"><Trash2 className="h-3.5 w-3.5" /></button>
+                        </div>
+                      </motion.div>
+                    ))}
                   </AnimatePresence>
                 </div>
               </CardContent>
@@ -507,17 +349,14 @@ export default function DocumentVerification() {
           </div>
         </TabsContent>
 
-        <TabsContent value="validation" className="space-y-4">
+        <TabsContent value="validation">
           <Card className="glass-card">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Cross-Validation Results</CardTitle>
-              <CardDescription className="text-xs">{selectedApplication.company}</CardDescription>
-            </CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-sm">Cross-Document Validation</CardTitle></CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {validations.map((v, i) => (
-                  <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
-                    className={`flex items-center gap-3 p-3 rounded-lg border ${
+                {(validations || []).map((v, i) => (
+                  <motion.div key={v.check} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
+                    className={`flex items-center gap-3 p-3 rounded-xl border ${
                       v.status === "pass" ? "bg-risk-low/5 border-risk-low/20" :
                       v.status === "warning" ? "bg-risk-medium/5 border-risk-medium/20" :
                       "bg-risk-high/5 border-risk-high/20"
@@ -530,6 +369,9 @@ export default function DocumentVerification() {
                     </div>
                   </motion.div>
                 ))}
+                {(!validations || validations.length === 0) && (
+                  <p className="text-sm text-muted-foreground text-center py-4">Upload and verify documents to see validation results</p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -537,25 +379,31 @@ export default function DocumentVerification() {
 
         <TabsContent value="summary">
           <Card className="glass-card">
-            <CardContent className="p-8 text-center">
-              <div className="relative inline-block">
-                <svg className="w-40 h-40 -rotate-90">
-                  <circle cx="80" cy="80" r="65" fill="none" stroke="hsl(var(--muted))" strokeWidth="10" />
-                  <motion.circle 
-                    cx="80" cy="80" r="65" fill="none"
-                    stroke={integrityScore >= 80 ? "hsl(var(--risk-low))" : integrityScore >= 60 ? "hsl(var(--risk-medium))" : "hsl(var(--risk-high))"}
-                    strokeWidth="10" strokeLinecap="round"
-                    initial={{ strokeDasharray: "0 408" }}
-                    animate={{ strokeDasharray: `${(integrityScore / 100) * 408} 408` }}
-                    transition={{ duration: 1, ease: "easeOut" }}
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className={`text-4xl font-bold ${integrityScore >= 80 ? "text-risk-low" : integrityScore >= 60 ? "text-risk-medium" : "text-risk-high"}`}>{integrityScore}</span>
-                  <span className="text-xs text-muted-foreground">Integrity Score</span>
+            <CardHeader className="pb-3"><CardTitle className="text-sm">Document Integrity Score</CardTitle></CardHeader>
+            <CardContent>
+              <div className="flex flex-col items-center py-6">
+                <div className="relative">
+                  <svg className="w-36 h-36 -rotate-90">
+                    <circle cx="72" cy="72" r="60" fill="none" stroke="hsl(var(--muted))" strokeWidth="8" />
+                    <motion.circle cx="72" cy="72" r="60" fill="none"
+                      stroke={integrityScore >= 80 ? "hsl(var(--risk-low))" : integrityScore >= 50 ? "hsl(var(--risk-medium))" : "hsl(var(--risk-high))"}
+                      strokeWidth="8" strokeLinecap="round"
+                      initial={{ strokeDasharray: "0 377" }}
+                      animate={{ strokeDasharray: `${(integrityScore / 100) * 377} 377` }}
+                      transition={{ duration: 1 }}
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className={`text-3xl font-bold ${integrityScore >= 80 ? "text-risk-low" : integrityScore >= 50 ? "text-risk-medium" : "text-risk-high"}`}>{integrityScore}</span>
+                    <span className="text-[10px] text-muted-foreground">out of 100</span>
+                  </div>
                 </div>
+                <p className="text-sm text-muted-foreground mt-4">
+                  {integrityScore >= 80 ? "Documents are well-verified and consistent." :
+                   integrityScore >= 50 ? "Some documents need attention." :
+                   "Critical issues found — review required."}
+                </p>
               </div>
-              <p className="text-sm text-muted-foreground mt-4">Document integrity score for {selectedApplication.company}</p>
             </CardContent>
           </Card>
         </TabsContent>
