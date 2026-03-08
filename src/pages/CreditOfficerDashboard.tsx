@@ -58,8 +58,6 @@ export default function CreditOfficerDashboard() {
       status: app.status,
       defaultProbability: Number(app.default_probability ?? 0.25),
       recommendation: app.recommendation || "Under Review",
-      documents: [],
-      financials: {} as any,
     });
     navigate("/document-verification");
   };
