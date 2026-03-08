@@ -44,14 +44,6 @@ export function AppLayout() {
   const unreadCount = notifications.filter(n => !notifRead.includes(n.id)).length;
   const markAllRead = () => setNotifRead(notifications.map(n => n.id));
 
-  const navMenuItems = [
-    { label: "Dashboard", icon: Home, url: "/dashboard" },
-    { label: "Applications", icon: FileText, url: "/applications" },
-    { label: "Risk Engine", icon: Shield, url: "/risk-engine" },
-    { label: "CAM Generator", icon: BookOpen, url: "/cam-generator" },
-    { label: "Decision Center", icon: Gavel, url: "/decision-center" },
-    { label: "AI Research", icon: Brain, url: "/research" },
-  ];
 
   const handleSelectApp = (app: typeof companyApplications[0]) => {
     setSelectedApplication(app);
