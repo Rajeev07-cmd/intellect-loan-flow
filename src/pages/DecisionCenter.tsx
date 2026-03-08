@@ -50,6 +50,7 @@ export default function DecisionCenter() {
   const [submitted, setSubmitted] = useState(false);
   const [comments, setComments] = useState<{ user: string; role: string; time: string; text: string; author?: string }[]>([]);
   const [auditTrail, setAuditTrail] = useState<{ time: string; event: string; user: string }[]>([]);
+  const [decisionState, setDecisionState] = useState<DecisionState>({ credit_officer_decision: null, manager_decision: null, final_status: null });
   const { toast } = useToast();
 
   // Initialize from selected application
