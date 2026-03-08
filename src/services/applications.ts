@@ -127,6 +127,8 @@ export async function createApplication(
   // Initialize workflow for this application
   if (data) {
     await initializeWorkflow(data.id);
+    await logAuditEvent("Application Created", `New application: ${input.company_name} — ₹${input.loan_amount} Cr`, data.id, "Credit Officer");
+    await createNotification("New Application", `${input.company_name} — ₹${input.loan_amount} Cr ${input.sector}`, "info", data.id);
   }
 
   return data;
