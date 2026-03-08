@@ -71,8 +71,8 @@ function mapDbToApp(db: DbApplication): CompanyApplication {
     ],
     documents: [],
     validations: [
-      { check: "PAN-GSTIN Match", status: "pending" as const, detail: "Pending verification" },
-      { check: "CIN Format", status: "pending" as const, detail: "Pending verification" },
+      { check: "PAN-GSTIN Match", status: "warning" as const, detail: "Pending verification" },
+      { check: "CIN Format", status: "warning" as const, detail: "Pending verification" },
     ],
     integrityScore: 0,
     researchFindings: [],
