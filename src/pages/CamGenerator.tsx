@@ -38,6 +38,31 @@ export default function CamGenerator() {
     }, 2000);
   };
 
+  const handleSaveToDb = async () => {
+    const isUUID = /^[0-9a-f]{8}-/i.test(app.id);
+    if (!isUUID) {
+      toast({ title: "Demo Application", description: "CAM reports can only be saved for database applications." });
+      return;
+    }
+    setSaving(true);
+    try {
+      await saveCamReport(app.id, {
+        company_overview: `${app.company} — ${app.sector} — CIN: ${app.cin}`,
+        financial_analysis: `Revenue: ${app.financials.revenue}, DSCR: ${app.financials.dscr}x, D/E: ${app.financials.debtEquity}x`,
+        risk_analysis: app.explainableAI.map(e => e.text).join("; "),
+        recommendation: app.recommendation,
+        suggested_loan_limit: app.suggestedLimit,
+        interest_rate: app.interestRate,
+      });
+      setSavedToDb(true);
+      toast({ title: "CAM Saved", description: "Report saved to database successfully." });
+    } catch (e) {
+      toast({ title: "Save Failed", description: "Could not save CAM report.", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleShare = () => {
     toast({ title: "Shared with Committee", description: "CAM report has been shared for review." });
   };
