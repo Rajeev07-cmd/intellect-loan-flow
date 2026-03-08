@@ -1,22 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Search, Download, Filter } from "lucide-react";
+import { Search, Download, Filter, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
-const logs = [
-  { id: 1, timestamp: "2026-03-03 14:32:15", user: "Rajesh Kumar", action: "Updated risk threshold", resource: "Auto-Reject Threshold → 85", level: "config", ip: "192.168.1.45" },
-  { id: 2, timestamp: "2026-03-03 13:18:42", user: "Priya Sharma", action: "Generated CAM report", resource: "APP-001 (Tata Steel Ltd)", level: "action", ip: "192.168.1.102" },
-  { id: 3, timestamp: "2026-03-03 12:05:33", user: "Amit Patel", action: "Uploaded documents", resource: "GST_Returns_FY24.pdf, ITR_FY23.pdf", level: "action", ip: "192.168.1.78" },
-  { id: 4, timestamp: "2026-03-03 11:47:19", user: "Rajesh Kumar", action: "Modified model weights", resource: "Character: 20→22, Capacity: 25→23", level: "config", ip: "192.168.1.45" },
-  { id: 5, timestamp: "2026-03-03 10:22:08", user: "Sneha Reddy", action: "Viewed audit logs", resource: "Admin Panel / Audit", level: "access", ip: "192.168.1.201" },
-  { id: 6, timestamp: "2026-03-02 17:55:44", user: "Rajesh Kumar", action: "Approved application", resource: "APP-004 (Infosys Ltd) — ₹350 Cr", level: "decision", ip: "192.168.1.45" },
-  { id: 7, timestamp: "2026-03-02 16:30:12", user: "Vikram Singh", action: "Rejected application", resource: "APP-008 (Vedanta Ltd) — High litigation risk", level: "decision", ip: "192.168.1.156" },
-  { id: 8, timestamp: "2026-03-02 15:10:55", user: "Anita Desai", action: "Added new user", resource: "rohit.mehta@intellicredit.com (Viewer)", level: "config", ip: "192.168.1.88" },
-  { id: 9, timestamp: "2026-03-02 14:02:31", user: "Priya Sharma", action: "Ran risk scoring", resource: "APP-002 (Reliance Industries) — Score: 35", level: "action", ip: "192.168.1.102" },
-  { id: 10, timestamp: "2026-03-02 11:45:20", user: "Amit Patel", action: "Updated due diligence", resource: "APP-003 — Factory utilization: 40%", level: "action", ip: "192.168.1.78" },
-];
+interface AuditLog {
+  id: string;
+  created_at: string;
+  user_name: string | null;
+  event_type: string;
+  event_description: string;
+  application_id: string | null;
+}
 
 const levelStyles: Record<string, string> = {
   config: "bg-primary/15 text-primary border border-primary/20",
@@ -25,23 +22,53 @@ const levelStyles: Record<string, string> = {
   access: "bg-muted text-muted-foreground border border-border",
 };
 
+function getLevel(eventType: string): string {
+  const lower = eventType.toLowerCase();
+  if (lower.includes("approv") || lower.includes("reject") || lower.includes("decision")) return "decision";
+  if (lower.includes("config") || lower.includes("threshold") || lower.includes("weight")) return "config";
+  if (lower.includes("view") || lower.includes("login")) return "access";
+  return "action";
+}
+
 export function AuditLogs() {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
+  const fetchLogs = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("audit_logs")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(100);
+
+    if (!error && data) setLogs(data);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetchLogs();
+    const channel = supabase
+      .channel("audit_logs_realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "audit_logs" }, () => fetchLogs())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchLogs]);
+
   const filtered = logs
-    .filter(l => filter === "all" || l.level === filter)
+    .filter(l => filter === "all" || getLevel(l.event_type) === filter)
     .filter(l => {
       if (!search) return true;
       const q = search.toLowerCase();
-      return l.user.toLowerCase().includes(q) || l.action.toLowerCase().includes(q) || l.resource.toLowerCase().includes(q);
+      return (l.user_name || "").toLowerCase().includes(q) || l.event_type.toLowerCase().includes(q) || l.event_description.toLowerCase().includes(q);
     });
 
   const handleExport = () => {
     const csv = [
-      "Timestamp,User,Action,Resource,Type,IP",
-      ...filtered.map(l => `${l.timestamp},${l.user},${l.action},"${l.resource}",${l.level},${l.ip}`)
+      "Timestamp,User,Event Type,Description",
+      ...filtered.map(l => `${l.created_at},${l.user_name || "System"},${l.event_type},"${l.event_description}"`)
     ].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -86,36 +113,46 @@ export function AuditLogs() {
       </div>
 
       <div className="glass-card overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border/50">
-              {["Timestamp", "User", "Action", "Resource", "Type", "IP"].map(h => (
-                <th key={h} className="text-left p-3 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="p-8 text-center text-sm text-muted-foreground">No logs matching your criteria.</td>
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border/50">
+                {["Timestamp", "User", "Event Type", "Description", "Type"].map(h => (
+                  <th key={h} className="text-left p-3 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{h}</th>
+                ))}
               </tr>
-            ) : (
-              filtered.map((log, i) => (
-                <motion.tr key={log.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }}
-                  className="border-b border-border/30 hover:bg-muted/20 transition-colors">
-                  <td className="p-3 text-[11px] text-muted-foreground font-mono whitespace-nowrap">{log.timestamp}</td>
-                  <td className="p-3 text-xs font-medium text-foreground whitespace-nowrap">{log.user}</td>
-                  <td className="p-3 text-xs text-foreground">{log.action}</td>
-                  <td className="p-3 text-xs text-muted-foreground max-w-[200px] truncate">{log.resource}</td>
-                  <td className="p-3">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize ${levelStyles[log.level]}`}>{log.level}</span>
-                  </td>
-                  <td className="p-3 text-[11px] text-muted-foreground font-mono">{log.ip}</td>
-                </motion.tr>
-              ))
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="p-8 text-center text-sm text-muted-foreground">No audit logs found. Actions will appear here as you use the platform.</td>
+                </tr>
+              ) : (
+                filtered.map((log, i) => {
+                  const level = getLevel(log.event_type);
+                  return (
+                    <motion.tr key={log.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }}
+                      className="border-b border-border/30 hover:bg-muted/20 transition-colors">
+                      <td className="p-3 text-[11px] text-muted-foreground font-mono whitespace-nowrap">
+                        {new Date(log.created_at).toLocaleString()}
+                      </td>
+                      <td className="p-3 text-xs font-medium text-foreground whitespace-nowrap">{log.user_name || "System"}</td>
+                      <td className="p-3 text-xs text-foreground">{log.event_type}</td>
+                      <td className="p-3 text-xs text-muted-foreground max-w-[300px] truncate">{log.event_description}</td>
+                      <td className="p-3">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize ${levelStyles[level] || levelStyles.action}`}>{level}</span>
+                      </td>
+                    </motion.tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        )}
       </div>
     </motion.div>
   );
