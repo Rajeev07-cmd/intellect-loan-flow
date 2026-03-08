@@ -22,6 +22,7 @@ import { logAuditEvent } from "@/services/auditLog";
 import { createNotification } from "@/services/notifications";
 import { updateWorkflowStatus } from "@/services/workflowStatus";
 import { supabase } from "@/integrations/supabase/client";
+import { getDecisionState, submitManagerDecision, type ManagerDecision, type DecisionState } from "@/services/decisionEngine";
 
 const decisionReasons = [
   "Strong collateral coverage",
