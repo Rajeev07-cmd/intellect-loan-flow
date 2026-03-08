@@ -95,16 +95,38 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="p-3">
-        {!collapsed && (
-          <div className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/20 border border-border/20">
-            <div className="h-8 w-8 rounded-full bg-primary/15 flex items-center justify-center">
-              <Zap className="h-4 w-4 text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-foreground truncate">Intelli-Credit Platform</p>
-              <p className="text-[10px] text-muted-foreground">Open Access Demo</p>
-            </div>
+        {user ? (
+          <div className={`flex items-center gap-3 p-2.5 rounded-xl bg-muted/20 border border-border/20 ${collapsed ? "justify-center" : ""}`}>
+            <Avatar className="h-8 w-8 shrink-0">
+              <AvatarImage src={profile?.avatar_url || undefined} />
+              <AvatarFallback className="bg-primary/15 text-primary text-xs font-semibold">
+                {(profile?.full_name || user.email || "U").slice(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            {!collapsed && (
+              <>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-foreground truncate">{profile?.full_name || user.email?.split("@")[0]}</p>
+                  <p className="text-[10px] text-muted-foreground capitalize">{profile?.role?.replace("_", " ") || "User"}</p>
+                </div>
+                <button onClick={() => { signOut(); navigate("/login"); }} className="text-muted-foreground hover:text-foreground transition-colors">
+                  <LogOut className="h-3.5 w-3.5" />
+                </button>
+              </>
+            )}
           </div>
+        ) : (
+          !collapsed && (
+            <button onClick={() => navigate("/login")} className="flex items-center gap-3 w-full p-2.5 rounded-xl bg-muted/20 border border-border/20 hover:bg-muted/40 transition-colors">
+              <div className="h-8 w-8 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
+                <User className="h-4 w-4 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0 text-left">
+                <p className="text-xs font-medium text-foreground">Sign In</p>
+                <p className="text-[10px] text-muted-foreground">Access your account</p>
+              </div>
+            </button>
+          )
         )}
       </SidebarFooter>
     </Sidebar>
