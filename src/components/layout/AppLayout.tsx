@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { getNotifications, markNotificationRead, markAllNotificationsRead, subscribeToNotifications, type Notification } from "@/services/notifications";
+import { useAuth } from "@/contexts/AuthContext";
 
 function getTimeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
