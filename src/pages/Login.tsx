@@ -14,7 +14,7 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const { signIn, resetPassword, user, profile, loading: authLoading } = useAuth();
+  const { signIn, resetPassword, user, profile, loading: authLoading, sessionExpired } = useAuth();
   
   const [selectedRole, setSelectedRole] = useState<RoleSelection | null>(null);
   const [showPassword, setShowPassword] = useState(false);
