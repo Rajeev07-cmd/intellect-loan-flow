@@ -56,7 +56,7 @@ export default function DecisionCenter() {
     if (!selectedApplication) return;
     setApprovedAmount(String(selectedApplication.loanAmount));
     setInterestRate(selectedApplication.interestRate?.replace("%", "") || "11.5");
-    setComments(selectedApplication.comments || []);
+    setComments((selectedApplication.comments || []).map(c => ({ ...c, user: (c as any).author || (c as any).user || "Unknown" })));
     setDecision("");
     setSubmitted(false);
     setRiskAdjustment([0]);
