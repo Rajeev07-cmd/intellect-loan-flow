@@ -31,7 +31,7 @@ const allNavItems: NavItem[] = [
   { title: "AI Research", url: "/research", icon: Brain, roles: ["credit_officer", "admin"] },
   // Manager pages
   { title: "Manager Dashboard", url: "/manager-dashboard", icon: LayoutDashboard, roles: ["manager", "admin"] },
-  { title: "Decision Center", url: "/decision-center", icon: Gavel, roles: ["manager", "admin"] },
+  { title: "Decision Center", url: "/decision-center", icon: Gavel, roles: ["credit_officer", "manager", "admin"] },
   // Admin pages
   { title: "Admin Settings", url: "/admin/users", icon: Settings, roles: ["admin"] },
 ];
