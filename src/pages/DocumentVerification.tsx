@@ -71,6 +71,19 @@ export default function DocumentVerification() {
     if (!selectedApplication) return;
 
     const loadDocuments = async () => {
+      // Check if the ID is a valid UUID (DB apps) vs mock ID like "APP-001"
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(selectedApplication.id);
+      
+      if (!isUUID) {
+        // Mock application - just use mock docs
+        const mockDocs = (selectedApplication.documents || []).map(d => ({
+          ...d,
+          progress: 100,
+        }));
+        setDocs(mockDocs);
+        return;
+      }
+
       try {
         const { data, error } = await supabase
           .from("documents")
