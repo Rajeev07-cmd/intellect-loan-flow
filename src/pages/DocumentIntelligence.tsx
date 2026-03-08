@@ -100,7 +100,7 @@ export default function DocumentIntelligence() {
         .from("document_extracted_fields")
         .select("*")
         .eq("application_id", selectedApplication.id);
-      setAllFields((fieldsData || []) as ExtractedField[]);
+      setAllFields((fieldsData || []) as unknown as ExtractedField[]);
       setLoading(false);
     };
     load();
