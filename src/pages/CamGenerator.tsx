@@ -88,6 +88,10 @@ export default function CamGenerator() {
           <Button variant="outline" size="sm" className="gap-2 rounded-xl" disabled={exporting === "Word"} onClick={() => handleExport("Word")}>
             {exporting === "Word" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} Word
           </Button>
+          <Button variant="outline" size="sm" className="gap-2 rounded-xl" onClick={handleSaveToDb} disabled={saving || savedToDb}>
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : savedToDb ? <CheckCircle className="h-4 w-4" /> : <Save className="h-4 w-4" />}
+            {saving ? "Saving..." : savedToDb ? "Saved" : "Save to DB"}
+          </Button>
           <Button size="sm" className="gap-2 rounded-xl" onClick={handleShare}>
             <Share2 className="h-4 w-4" /> Share
           </Button>
