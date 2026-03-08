@@ -72,6 +72,60 @@ export default function RiskEngine() {
         <p className="text-sm text-muted-foreground mt-1">{selectedApplication.company} — Five Cs Analysis with Explainable AI</p>
       </div>
 
+      {/* API Status + Run Model */}
+      <div className="flex items-center gap-3">
+        {usingFallback && (
+          <Badge variant="outline" className="gap-1.5 text-xs text-risk-medium border-risk-medium/30">
+            <WifiOff className="h-3 w-3" /> Using mock data
+          </Badge>
+        )}
+        {liveResult && !usingFallback && (
+          <Badge variant="outline" className="gap-1.5 text-xs text-risk-low border-risk-low/30">
+            <Wifi className="h-3 w-3" /> Live ML prediction
+          </Badge>
+        )}
+        <Button size="sm" className="gap-2 rounded-xl" onClick={handleRunModel} disabled={analyzing}>
+          {analyzing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Brain className="h-4 w-4" />}
+          {analyzing ? "Running Model..." : "Run ML Model"}
+        </Button>
+      </div>
+
+      {/* Live result banner */}
+      {liveResult && (
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+          className="glass-card p-4 border-primary/30"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <Brain className="h-4 w-4 text-primary" />
+            <span className="text-xs font-semibold text-primary uppercase tracking-wider">Live ML Prediction</span>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <p className="text-2xl font-bold text-foreground">{liveResult.risk_score}</p>
+              <p className="text-xs text-muted-foreground">Risk Score</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-foreground">{liveResult.risk_category}</p>
+              <p className="text-xs text-muted-foreground">Category</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-foreground">{(liveResult.default_probability * 100).toFixed(0)}%</p>
+              <p className="text-xs text-muted-foreground">Default Probability</p>
+            </div>
+          </div>
+          {liveResult.explanation?.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-border/30">
+              <p className="text-xs text-muted-foreground mb-1.5">Top Risk Factors:</p>
+              <div className="flex flex-wrap gap-2">
+                {liveResult.explanation.map((e, i) => (
+                  <Badge key={i} variant="secondary" className="text-xs">{e}</Badge>
+                ))}
+              </div>
+            </div>
+          )}
+        </motion.div>
+      )}
+
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[

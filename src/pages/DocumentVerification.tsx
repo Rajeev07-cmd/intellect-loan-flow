@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Upload, FileCheck, AlertTriangle, XCircle, File, Trash2, CheckCircle2, ShieldCheck, RotateCcw, Loader2 } from "lucide-react";
+import { Upload, FileCheck, AlertTriangle, XCircle, File, Trash2, CheckCircle2, ShieldCheck, RotateCcw, Loader2, Wifi, WifiOff } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useApplicationStore } from "@/store/useApplicationStore";
 import { ActiveApplicationBanner, NoApplicationSelected } from "@/components/ActiveApplicationBanner";
+import { processDocument, verifyDocuments, type VerificationResult } from "@/services/documentProcessing";
+import { useApiCall } from "@/hooks/useApiCall";
 
 interface DocFile {
   id: string;
