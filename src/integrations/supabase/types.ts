@@ -14,7 +14,125 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      applications: {
+        Row: {
+          business_description: string | null
+          cibil_score: number | null
+          cin: string | null
+          company_name: string
+          contact_person: string | null
+          created_at: string
+          default_probability: number | null
+          id: string
+          incorporation_year: string | null
+          interest_rate: string | null
+          loan_amount: number
+          promoter_group: string | null
+          recommendation: string | null
+          registered_address: string | null
+          risk_category: string | null
+          risk_score: number | null
+          sector: string
+          status: string
+          suggested_limit: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          business_description?: string | null
+          cibil_score?: number | null
+          cin?: string | null
+          company_name: string
+          contact_person?: string | null
+          created_at?: string
+          default_probability?: number | null
+          id?: string
+          incorporation_year?: string | null
+          interest_rate?: string | null
+          loan_amount: number
+          promoter_group?: string | null
+          recommendation?: string | null
+          registered_address?: string | null
+          risk_category?: string | null
+          risk_score?: number | null
+          sector: string
+          status?: string
+          suggested_limit?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          business_description?: string | null
+          cibil_score?: number | null
+          cin?: string | null
+          company_name?: string
+          contact_person?: string | null
+          created_at?: string
+          default_probability?: number | null
+          id?: string
+          incorporation_year?: string | null
+          interest_rate?: string | null
+          loan_amount?: number
+          promoter_group?: string | null
+          recommendation?: string | null
+          registered_address?: string | null
+          risk_category?: string | null
+          risk_score?: number | null
+          sector?: string
+          status?: string
+          suggested_limit?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      documents: {
+        Row: {
+          application_id: string
+          created_at: string
+          document_name: string
+          document_type: string
+          file_path: string
+          file_size: string | null
+          file_url: string | null
+          id: string
+          user_id: string | null
+          verification_status: string
+        }
+        Insert: {
+          application_id: string
+          created_at?: string
+          document_name: string
+          document_type: string
+          file_path: string
+          file_size?: string | null
+          file_url?: string | null
+          id?: string
+          user_id?: string | null
+          verification_status?: string
+        }
+        Update: {
+          application_id?: string
+          created_at?: string
+          document_name?: string
+          document_type?: string
+          file_path?: string
+          file_size?: string | null
+          file_url?: string | null
+          id?: string
+          user_id?: string | null
+          verification_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
