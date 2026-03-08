@@ -109,7 +109,10 @@ export default function CamGenerator() {
               return (
                 <button
                   key={item.id}
-                  onClick={() => setActiveSection(item.id)}
+                  onClick={() => {
+                    setActiveSection(item.id);
+                    document.getElementById(item.id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
                   className={`flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-xs font-medium transition-all ${
                     activeSection === item.id
                       ? "bg-primary/10 text-primary border border-primary/20"
