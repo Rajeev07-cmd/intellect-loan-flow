@@ -27,7 +27,7 @@ export default function Tracking() {
     toast({ title: "Comment Added", description: "Your note has been posted." });
   };
 
-  const completedIndex = pipeline.findLastIndex(s => s.status === "completed");
+  const completedIndex = pipeline.reduce((last, s, i) => s.status === "completed" ? i : last, -1);
   const activeIndex = pipeline.findIndex(s => s.status === "active");
   const progressPercent = activeIndex >= 0
     ? ((activeIndex) / (pipeline.length - 1)) * 100
