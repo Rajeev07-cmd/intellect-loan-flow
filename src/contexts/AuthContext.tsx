@@ -1,6 +1,10 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
+
+const SESSION_LOGIN_TIME_KEY = "intelli_credit_login_time";
+const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export type UserRole = "credit_officer" | "manager" | "admin";
 
