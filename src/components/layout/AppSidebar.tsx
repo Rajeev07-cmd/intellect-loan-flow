@@ -48,7 +48,7 @@ export function AppSidebar() {
   const visibleItems = allNavItems.filter(item => item.roles.includes(userRole));
 
   // Group items: "Main" for dashboard/workflow, "Tools" for secondary
-  const mainUrls = ["/dashboard", "/manager-dashboard", "/applications", "/document-verification", "/risk-engine", "/cam-generator", "/tracking"];
+  const mainUrls = ["/dashboard", "/manager-dashboard", "/applications", "/document-verification", "/document-intelligence", "/risk-engine", "/cam-generator", "/tracking"];
   const mainItems = visibleItems.filter(i => mainUrls.includes(i.url));
   const toolItems = visibleItems.filter(i => !mainUrls.includes(i.url));
 
