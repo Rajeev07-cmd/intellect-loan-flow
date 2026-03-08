@@ -135,7 +135,7 @@ export default function DocumentIntelligence() {
           .from("document_extracted_fields")
           .select("*")
           .eq("application_id", selectedApplication.id);
-        setAllFields((fieldsData || []) as ExtractedField[]);
+        setAllFields((fieldsData || []) as unknown as ExtractedField[]);
         toast({ title: "Extraction Complete", description: `${result.fields_count} fields extracted` });
       }
     } catch (e: any) {
