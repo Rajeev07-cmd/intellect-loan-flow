@@ -61,7 +61,7 @@ export default function RiskEngine() {
 
   if (!selectedApplication) return <NoApplicationSelected />;
 
-  const fiveCsScores = selectedApplication.fiveCsScores;
+  const fiveCsScores = selectedApplication.fiveCsScores ?? [];
   const overallScore = fiveCsScores.reduce((sum, c) => sum + c.contribution, 0);
 
   const radarData = fiveCsScores.map(c => ({
