@@ -14,6 +14,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useApplicationStore } from "@/store/useApplicationStore";
 import { ActiveApplicationBanner, NoApplicationSelected } from "@/components/ActiveApplicationBanner";
 import { supabase } from "@/integrations/supabase/client";
+import { logAuditEvent } from "@/services/auditLog";
+import { createNotification } from "@/services/notifications";
 
 interface DocFile {
   id: string;
