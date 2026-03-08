@@ -73,7 +73,9 @@ export async function submitCreditOfficerDecision(
     "Credit Officer Decision Submitted",
     `${companyName} — Credit Officer recommends: ${label}. Awaiting your review.`,
     decision === "reject" ? "error" : decision === "conditional" ? "warning" : "info",
-    applicationId
+    applicationId,
+    "manager",
+    "application_submitted"
   );
 }
 
@@ -127,7 +129,9 @@ export async function submitManagerDecision(
     `Loan ${finalStatus}`,
     `${companyName} — Manager decision: ${mgrLabel}. Final status: ${finalStatus}`,
     finalStatus === "Rejected" ? "error" : finalStatus === "Approved" ? "info" : "warning",
-    applicationId
+    applicationId,
+    "credit_officer",
+    finalStatus === "Approved" ? "approval_completed" : finalStatus === "Rejected" ? "manager_decision" : "review_required"
   );
 }
 

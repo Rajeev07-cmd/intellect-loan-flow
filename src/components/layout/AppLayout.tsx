@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { getNotifications, markNotificationRead, markAllNotificationsRead, subscribeToNotifications, type Notification } from "@/services/notifications";
+import { useAuth } from "@/contexts/AuthContext";
 
 function getTimeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -83,6 +84,10 @@ export function AppLayout() {
   const location = useLocation();
   const { toast } = useToast();
   const { selectedApplication, setSelectedApplication } = useApplicationStore();
+  const { profile } = useAuth();
+
+  // Map user role to notification role
+  const notifRole = profile?.role === "manager" ? "manager" as const : "credit_officer" as const;
 
   // Fetch DB applications and notifications
   useEffect(() => {
@@ -104,16 +109,16 @@ export function AppLayout() {
     };
     const fetchNotifs = async () => {
       try {
-        const dbNotifs = await getNotifications();
+        const dbNotifs = await getNotifications(20, notifRole);
         setNotifs(dbNotifs);
       } catch { /* empty */ }
     };
     fetchApps();
     fetchNotifs();
 
-    const sub = subscribeToNotifications((updated) => setNotifs(updated));
+    const sub = subscribeToNotifications((updated) => setNotifs(updated), notifRole);
     return () => { sub.unsubscribe(); };
-  }, []);
+  }, [notifRole]);
 
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
@@ -129,7 +134,7 @@ export function AppLayout() {
   const unreadCount = notifs.filter(n => !n.is_read).length;
   const markAllRead = async () => {
     setNotifs(prev => prev.map(n => ({ ...n, is_read: true })));
-    await markAllNotificationsRead();
+    await markAllNotificationsRead(notifRole);
   };
 
   const handleSelectApp = (app: CompanyApplication) => {
@@ -273,6 +278,10 @@ export function AppLayout() {
                           onClick={async () => {
                             setNotifs(prev => prev.map(x => x.id === n.id ? { ...x, is_read: true } : x));
                             await markNotificationRead(n.id);
+                            // Navigate to decision center or relevant page on click
+                            if (n.application_id) {
+                              navigate("/decision-center");
+                            }
                           }}
                         >
                           <div className="flex items-center gap-2 w-full">
