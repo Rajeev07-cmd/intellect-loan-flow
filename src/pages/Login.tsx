@@ -183,43 +183,6 @@ export default function Login() {
                 </motion.div>
               )}
 
-              {/* Role Selection - informational only */}
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Your Role</label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedRole("credit_officer")}
-                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                      selectedRole === "credit_officer"
-                        ? "border-primary bg-primary/10 shadow-md"
-                        : "border-border/50 hover:border-primary/30 hover:bg-muted/50"
-                    }`}
-                  >
-                    <div className={`p-2.5 rounded-lg ${selectedRole === "credit_officer" ? "bg-primary/20" : "bg-muted/50"}`}>
-                      <Briefcase className={`h-5 w-5 ${selectedRole === "credit_officer" ? "text-primary" : "text-muted-foreground"}`} />
-                    </div>
-                    <span className={`text-sm font-semibold ${selectedRole === "credit_officer" ? "text-primary" : "text-foreground"}`}>Credit Officer</span>
-                    <span className="text-[10px] text-muted-foreground">Loan Processing</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedRole("manager")}
-                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                      selectedRole === "manager"
-                        ? "border-primary bg-primary/10 shadow-md"
-                        : "border-border/50 hover:border-primary/30 hover:bg-muted/50"
-                    }`}
-                  >
-                    <div className={`p-2.5 rounded-lg ${selectedRole === "manager" ? "bg-primary/20" : "bg-muted/50"}`}>
-                      <Users className={`h-5 w-5 ${selectedRole === "manager" ? "text-primary" : "text-muted-foreground"}`} />
-                    </div>
-                    <span className={`text-sm font-semibold ${selectedRole === "manager" ? "text-primary" : "text-foreground"}`}>Manager</span>
-                    <span className="text-[10px] text-muted-foreground">Decision & Oversight</span>
-                  </button>
-                </div>
-                <p className="text-[10px] text-muted-foreground text-center mt-1">Your dashboard will be based on your registered role</p>
-              </div>
 
               <form onSubmit={handleLogin} className="space-y-5">
                 <div className="space-y-2">
