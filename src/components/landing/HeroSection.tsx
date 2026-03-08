@@ -82,7 +82,7 @@ export function HeroSection() {
             size="lg"
             variant="outline"
             className="gap-2 h-12 text-base"
-            onClick={() => document.getElementById("architecture")?.scrollIntoView({ behavior: "smooth" })}
+            onClick={() => document.getElementById("workflow")?.scrollIntoView({ behavior: "smooth" })}
           >
             <Play className="h-4 w-4" /> View Demo
           </Button>
