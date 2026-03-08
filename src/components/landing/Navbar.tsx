@@ -7,10 +7,10 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 
 const navItems = [
   { label: "Home", href: "#home" },
-  { label: "Features", href: "#features" },
+  { label: "Platform", href: "#features" },
   { label: "AI Engine", href: "#architecture" },
-  { label: "Risk Intelligence", href: "#risk-engine" },
-  { label: "CAM Generator", href: "#cam" },
+  { label: "Features", href: "#risk-engine" },
+  { label: "Solutions", href: "#cam" },
   { label: "Contact", href: "#contact" },
 ];
 
