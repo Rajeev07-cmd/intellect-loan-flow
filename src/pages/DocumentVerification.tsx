@@ -1,13 +1,10 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Upload, FileCheck, AlertTriangle, XCircle, File, Eye, Trash2, CheckCircle2, ShieldCheck, RotateCcw, Loader2 } from "lucide-react";
+import { Upload, FileCheck, AlertTriangle, XCircle, File, Trash2, CheckCircle2, ShieldCheck, RotateCcw, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useApplicationStore } from "@/store/useApplicationStore";
 import { ActiveApplicationBanner, NoApplicationSelected } from "@/components/ActiveApplicationBanner";
@@ -39,22 +36,13 @@ export default function DocumentVerification() {
   const { selectedApplication } = useApplicationStore();
   const { toast } = useToast();
   const [verifying, setVerifying] = useState(false);
-  const [viewingDoc, setViewingDoc] = useState<DocFile | null>(null);
 
-  const initialDocs: DocFile[] = (selectedApplication?.documents || []).map(d => ({
-    ...d,
-    progress: 100,
-  }));
+  const initialDocs: DocFile[] = useMemo(() =>
+    (selectedApplication?.documents || []).map(d => ({ ...d, progress: 100 })),
+    [selectedApplication]
+  );
 
   const [docs, setDocs] = useState<DocFile[]>(initialDocs);
-
-  if (!selectedApplication) return <NoApplicationSelected />;
-
-  const verified = docs.filter(d => d.status === "verified").length;
-  const pending = docs.filter(d => d.status === "pending").length;
-  const failed = docs.filter(d => d.status === "failed").length;
-  const validations = selectedApplication.validations;
-  const integrityScore = selectedApplication.integrityScore;
 
   const handleFileDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -75,20 +63,20 @@ export default function DocumentVerification() {
     }, 2000);
   }, [toast]);
 
-  const removeDoc = (id: string) => {
+  const removeDoc = useCallback((id: string) => {
     setDocs(prev => prev.filter(d => d.id !== id));
     toast({ title: "Removed", description: "Document removed." });
-  };
+  }, [toast]);
 
-  const retryDoc = (id: string) => {
+  const retryDoc = useCallback((id: string) => {
     setDocs(prev => prev.map(d => d.id === id ? { ...d, status: "uploading" as const } : d));
     setTimeout(() => {
       setDocs(prev => prev.map(d => d.id === id ? { ...d, status: "verified" as const } : d));
       toast({ title: "Verified", description: "Document verified." });
     }, 2500);
-  };
+  }, [toast]);
 
-  const runFullVerification = () => {
+  const runFullVerification = useCallback(() => {
     setVerifying(true);
     toast({ title: "Verification Started", description: "Running full document verification..." });
     setTimeout(() => {
@@ -96,7 +84,15 @@ export default function DocumentVerification() {
       setVerifying(false);
       toast({ title: "Complete", description: "All pending documents verified." });
     }, 3000);
-  };
+  }, [toast]);
+
+  if (!selectedApplication) return <NoApplicationSelected />;
+
+  const verified = docs.filter(d => d.status === "verified").length;
+  const pending = docs.filter(d => d.status === "pending").length;
+  const failed = docs.filter(d => d.status === "failed").length;
+  const validations = selectedApplication.validations;
+  const integrityScore = selectedApplication.integrityScore;
 
   return (
     <div className="space-y-6 animate-slide-up">
@@ -113,7 +109,6 @@ export default function DocumentVerification() {
         </Button>
       </div>
 
-      {/* Summary KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: "Total Documents", value: docs.length, icon: File, color: "text-primary" },
@@ -124,9 +119,7 @@ export default function DocumentVerification() {
           <motion.div key={kpi.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
             <Card className="glass-card">
               <CardContent className="p-4 flex items-center gap-4">
-                <div className={`p-2.5 rounded-lg bg-muted/50 ${kpi.color}`}>
-                  <kpi.icon className="h-5 w-5" />
-                </div>
+                <div className={`p-2.5 rounded-lg bg-muted/50 ${kpi.color}`}><kpi.icon className="h-5 w-5" /></div>
                 <div>
                   <p className="text-2xl font-bold text-foreground">{kpi.value}</p>
                   <p className="text-xs text-muted-foreground">{kpi.label}</p>
@@ -152,10 +145,8 @@ export default function DocumentVerification() {
                 <CardDescription className="text-xs">Drag & drop or click to upload</CardDescription>
               </CardHeader>
               <CardContent>
-                <div
-                  onDragOver={e => e.preventDefault()}
-                  onDrop={handleFileDrop}
-                  className="border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer border-border/50 hover:border-primary/30"
+                <div onDragOver={e => e.preventDefault()} onDrop={handleFileDrop}
+                  className="border-2 border-dashed rounded-xl p-8 text-center cursor-pointer border-border/50 hover:border-primary/30"
                 >
                   <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
                   <p className="text-sm text-foreground font-medium">Drop files here</p>
@@ -165,14 +156,12 @@ export default function DocumentVerification() {
             </Card>
 
             <Card className="glass-card lg:col-span-2">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm">Uploaded Documents</CardTitle>
-              </CardHeader>
+              <CardHeader className="pb-3"><CardTitle className="text-sm">Uploaded Documents</CardTitle></CardHeader>
               <CardContent>
                 <div className="space-y-2">
                   <AnimatePresence>
                     {docs.map((doc, i) => (
-                      <motion.div key={doc.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ delay: i * 0.03 }}
+                      <motion.div key={doc.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                         className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors group"
                       >
                         <StatusIcon status={doc.status} />
@@ -207,7 +196,7 @@ export default function DocumentVerification() {
           <Card className="glass-card">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm">Cross-Validation Results</CardTitle>
-              <CardDescription className="text-xs">{selectedApplication.company} — Automated document checks</CardDescription>
+              <CardDescription className="text-xs">{selectedApplication.company}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
@@ -231,7 +220,7 @@ export default function DocumentVerification() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="summary" className="space-y-4">
+        <TabsContent value="summary">
           <Card className="glass-card">
             <CardContent className="p-8 text-center">
               <div className="relative inline-block">
@@ -244,30 +233,15 @@ export default function DocumentVerification() {
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className={`text-4xl font-bold ${integrityScore >= 80 ? "text-risk-low" : integrityScore >= 60 ? "text-risk-medium" : "text-risk-high"}`}>
-                    {integrityScore}
-                  </span>
+                  <span className={`text-4xl font-bold ${integrityScore >= 80 ? "text-risk-low" : integrityScore >= 60 ? "text-risk-medium" : "text-risk-high"}`}>{integrityScore}</span>
                   <span className="text-xs text-muted-foreground">Integrity Score</span>
                 </div>
               </div>
-              <p className="text-sm text-muted-foreground mt-4">
-                Document integrity score for {selectedApplication.company}
-              </p>
+              <p className="text-sm text-muted-foreground mt-4">Document integrity score for {selectedApplication.company}</p>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
-
-      <Dialog open={!!viewingDoc} onOpenChange={() => setViewingDoc(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{viewingDoc?.name}</DialogTitle>
-          </DialogHeader>
-          <div className="py-8 text-center text-sm text-muted-foreground">
-            Document preview not available in demo mode.
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
