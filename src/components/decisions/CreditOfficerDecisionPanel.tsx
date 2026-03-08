@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ThumbsUp, AlertTriangle, ThumbsDown, Send, CheckCircle2, Loader2, Shield } from "lucide-react";
+import { ThumbsUp, AlertTriangle, ThumbsDown, Send, CheckCircle2, Loader2, Shield, BellRing } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useApplicationStore } from "@/store/useApplicationStore";
 import {
@@ -12,12 +14,14 @@ import {
   getDecisionState,
   type CreditOfficerDecision,
 } from "@/services/decisionEngine";
+import { supabase } from "@/integrations/supabase/client";
 
 export function CreditOfficerDecisionPanel() {
   const { selectedApplication } = useApplicationStore();
   const { toast } = useToast();
   const [decision, setDecision] = useState<CreditOfficerDecision | "">("");
   const [comment, setComment] = useState("");
+  const [notifyManager, setNotifyManager] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [existingDecision, setExistingDecision] = useState<string | null>(null);
@@ -52,11 +56,28 @@ export function CreditOfficerDecisionPanel() {
     setSubmitting(true);
     try {
       if (isUUID) {
-        await submitCreditOfficerDecision(app.id, decision, app.company);
+        if (notifyManager) {
+          // Full workflow: save decision + notify manager + update workflow stage
+          await submitCreditOfficerDecision(app.id, decision, app.company);
+        } else {
+          // Save decision only — no notification, no workflow push
+          await supabase
+            .from("applications")
+            .update({
+              credit_officer_decision: decision,
+              updated_at: new Date().toISOString(),
+            } as any)
+            .eq("id", app.id);
+        }
       }
       setSubmitted(true);
       setExistingDecision(decision);
-      toast({ title: "Decision Submitted", description: `Recommendation: ${decision}. Manager has been notified.` });
+      toast({
+        title: "Decision Submitted",
+        description: notifyManager
+          ? `Recommendation: ${decisionLabel(decision)}. Manager has been notified.`
+          : `Recommendation: ${decisionLabel(decision)}. Saved without notifying Manager.`,
+      });
     } catch (e) {
       toast({ title: "Error", description: "Failed to submit decision.", variant: "destructive" });
     } finally {
@@ -122,6 +143,27 @@ export function CreditOfficerDecisionPanel() {
               placeholder="Add rationale for your recommendation..."
               className="text-xs min-h-[60px] resize-none"
             />
+
+            {/* Notify Manager Toggle */}
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/40">
+              <div className="flex items-center gap-2.5">
+                <BellRing className={`h-4 w-4 ${notifyManager ? "text-primary" : "text-muted-foreground"}`} />
+                <Label htmlFor="notify-manager" className="text-xs font-medium cursor-pointer">
+                  Send application to Manager for Review
+                </Label>
+              </div>
+              <Switch
+                id="notify-manager"
+                checked={notifyManager}
+                onCheckedChange={setNotifyManager}
+              />
+            </div>
+            {!notifyManager && (
+              <p className="text-[10px] text-muted-foreground px-1">
+                Decision will be saved without notifying the Manager or changing the workflow stage.
+              </p>
+            )}
+
             <AnimatePresence>
               {decision && (
                 <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 5 }}>
@@ -132,7 +174,7 @@ export function CreditOfficerDecisionPanel() {
                     disabled={submitting}
                   >
                     {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-                    {submitting ? "Submitting..." : "Submit to Manager"}
+                    {submitting ? "Submitting..." : notifyManager ? "Submit & Notify Manager" : "Save Decision Only"}
                   </Button>
                 </motion.div>
               )}
@@ -142,7 +184,11 @@ export function CreditOfficerDecisionPanel() {
 
         {submitted && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-3 rounded-lg bg-primary/5 border border-primary/20 text-center">
-            <p className="text-xs text-muted-foreground">Decision submitted. Waiting for Manager review.</p>
+            <p className="text-xs text-muted-foreground">
+              {existingDecision && notifyManager
+                ? "🟡 Decision submitted. Waiting for Manager review."
+                : "Decision saved."}
+            </p>
           </motion.div>
         )}
       </CardContent>
