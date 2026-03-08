@@ -278,6 +278,10 @@ export function AppLayout() {
                           onClick={async () => {
                             setNotifs(prev => prev.map(x => x.id === n.id ? { ...x, is_read: true } : x));
                             await markNotificationRead(n.id);
+                            // Navigate to decision center or relevant page on click
+                            if (n.application_id) {
+                              navigate("/decision-center");
+                            }
                           }}
                         >
                           <div className="flex items-center gap-2 w-full">
