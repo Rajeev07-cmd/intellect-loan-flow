@@ -1,9 +1,9 @@
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate, useLocation, Outlet } from "react-router-dom";
 import { useAuth, UserRole } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
 
 interface ProtectedRouteProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   allowedRoles?: UserRole[];
 }
 
@@ -23,18 +23,17 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   }
 
   if (!user) {
-    // Save the attempted URL for redirecting after login
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   // Check role-based access
   if (allowedRoles && profile && !allowedRoles.includes(profile.role)) {
-    // Redirect to appropriate dashboard based on role
     const redirectPath = profile.role === "manager" 
-      ? "/manager/dashboard" 
-      : "/credit-officer/dashboard";
+      ? "/manager-dashboard" 
+      : "/dashboard";
     return <Navigate to={redirectPath} replace />;
   }
 
-  return <>{children}</>;
+  // If used as a layout route wrapper, render children or Outlet
+  return <>{children || <Outlet />}</>;
 }

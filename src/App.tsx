@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 import CreditOfficerDashboard from "./pages/CreditOfficerDashboard";
 import Applications from "./pages/Applications";
@@ -17,6 +18,9 @@ import AIResearch from "./pages/AIResearch";
 import ManagerDashboard from "./pages/ManagerDashboard";
 import AdminSettings from "./pages/AdminSettings";
 import Index from "./pages/Index";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -39,22 +43,25 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
-              <Route element={<AppLayout />}>
-                <Route path="/dashboard" element={<CreditOfficerDashboard />} />
-                <Route path="/applications" element={<Applications />} />
-                <Route path="/document-verification" element={<DocumentVerification />} />
-                <Route path="/risk-engine" element={<RiskEngine />} />
-                <Route path="/cam-generator" element={<CamGenerator />} />
-                <Route path="/tracking" element={<Tracking />} />
-                <Route path="/decision-center" element={<DecisionCenter />} />
-                <Route path="/research" element={<AIResearch />} />
-                <Route path="/manager-dashboard" element={<ManagerDashboard />} />
-                <Route path="/admin/users" element={<AdminSettings />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route element={<ProtectedRoute />}>
+                <Route element={<AppLayout />}>
+                  <Route path="/dashboard" element={<CreditOfficerDashboard />} />
+                  <Route path="/applications" element={<Applications />} />
+                  <Route path="/document-verification" element={<DocumentVerification />} />
+                  <Route path="/risk-engine" element={<RiskEngine />} />
+                  <Route path="/cam-generator" element={<CamGenerator />} />
+                  <Route path="/tracking" element={<Tracking />} />
+                  <Route path="/decision-center" element={<DecisionCenter />} />
+                  <Route path="/research" element={<AIResearch />} />
+                  <Route path="/manager-dashboard" element={<ManagerDashboard />} />
+                  <Route path="/admin/users" element={<AdminSettings />} />
+                </Route>
               </Route>
-              <Route path="/login" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/signup" element={<Navigate to="/dashboard" replace />} />
               <Route path="/credit-officer/*" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/manager/*" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/manager/*" element={<Navigate to="/manager-dashboard" replace />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

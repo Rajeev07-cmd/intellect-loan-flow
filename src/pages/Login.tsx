@@ -29,8 +29,8 @@ export default function Login() {
     if (!authLoading && user && profile) {
       const from = (location.state as any)?.from?.pathname;
       const redirectPath = from || (profile.role === "manager" 
-        ? "/manager/dashboard" 
-        : "/credit-officer/dashboard");
+        ? "/manager-dashboard" 
+        : "/dashboard");
       navigate(redirectPath, { replace: true });
     }
   }, [user, profile, authLoading, navigate, location]);
