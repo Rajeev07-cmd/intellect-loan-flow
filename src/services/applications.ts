@@ -1,5 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { initializeWorkflow } from "./workflowStatus";
+import { logAuditEvent } from "./auditLog";
+import { createNotification } from "./notifications";
 
 export interface Application {
   id: string;
