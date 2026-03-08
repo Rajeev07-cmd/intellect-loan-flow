@@ -8,6 +8,7 @@ const developers = [
     description: "Architecting the end-to-end platform from data pipelines to decision dashboards.",
     initials: "RP",
     color: "from-primary/30 to-chart-4/30",
+    linkedin: "https://www.linkedin.com/in/rajeev-pichika-8b58a8309",
   },
   {
     name: "Tarun Kumar Choudhury",
@@ -15,6 +16,7 @@ const developers = [
     description: "Building credit risk models, explainable AI modules, and backend infrastructure.",
     initials: "TC",
     color: "from-chart-4/30 to-chart-2/30",
+    linkedin: "https://www.linkedin.com/in/tarunkumarchoudhury",
   },
   {
     name: "Sudeepa Mund",
@@ -22,6 +24,7 @@ const developers = [
     description: "Crafting responsive, high-performance interfaces for credit officers and managers.",
     initials: "SM",
     color: "from-chart-2/30 to-primary/30",
+    linkedin: "https://www.linkedin.com/in/sudeepa-mund",
   },
   {
     name: "Subhankar Rath",
@@ -29,6 +32,7 @@ const developers = [
     description: "Designing intuitive workflows and enterprise-grade visual experiences.",
     initials: "SR",
     color: "from-primary/30 to-chart-1/30",
+    linkedin: "https://www.linkedin.com/in/subhankar-rath-2a369b274",
   },
 ];
 
