@@ -2,12 +2,15 @@ import { useState, useMemo } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
-import { Bell, Search, X, Menu, Home, FileText, Shield, BookOpen, Gavel, Brain, LogOut } from "lucide-react";
+import { Bell, Search, X, Menu, Home, FileText, Shield, BookOpen, Gavel, Brain, LogOut, Building2, ChevronDown } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { recentApplications } from "@/lib/mock-data";
+import { companyApplications } from "@/lib/company-data";
+import { useApplicationStore } from "@/store/useApplicationStore";
 import { useToast } from "@/hooks/use-toast";
+import { AnimatePresence, motion } from "framer-motion";
 
 const notifications = [
   { id: 1, title: "High Risk Alert", desc: "Adani Ports & SEZ flagged — Risk Score 72", time: "5 min ago", read: false },
@@ -21,9 +24,11 @@ export function AppLayout() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
   const [notifRead, setNotifRead] = useState<number[]>(notifications.filter(n => n.read).map(n => n.id));
+  const [appSelectorOpen, setAppSelectorOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const { selectedApplication, setSelectedApplication } = useApplicationStore();
 
   const role = localStorage.getItem("userRole") || "credit-officer";
   const prefix = role === "manager" ? "/manager" : "/credit-officer";
@@ -60,14 +65,21 @@ export function AppLayout() {
     navigate("/login");
   };
 
+  const handleSelectApp = (app: typeof companyApplications[0]) => {
+    setSelectedApplication(app);
+    setAppSelectorOpen(false);
+    toast({ title: "Application Selected", description: `Switched to ${app.company}` });
+  };
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="h-14 flex items-center justify-between border-b border-border/50 px-4 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-            <div className="flex items-center gap-3 relative">
-              <div className="hidden md:flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-1.5 w-72">
+          <header className="h-14 flex items-center justify-between border-b border-border/40 px-4 bg-card/60 backdrop-blur-xl sticky top-0 z-10">
+            <div className="flex items-center gap-4 relative flex-1">
+              {/* Search */}
+              <div className="hidden md:flex items-center gap-2 bg-muted/40 rounded-xl px-3.5 py-2 w-72 border border-border/30 focus-within:border-primary/40 transition-colors">
                 <Search className="h-3.5 w-3.5 text-muted-foreground" />
                 <input
                   type="text"
@@ -85,7 +97,7 @@ export function AppLayout() {
                 )}
               </div>
               {searchFocused && searchQuery && (
-                <div className="absolute top-full left-0 mt-1 w-72 bg-popover border border-border rounded-lg shadow-lg z-50 max-h-64 overflow-auto">
+                <div className="absolute top-full left-0 mt-1 w-72 bg-popover border border-border rounded-xl shadow-xl z-50 max-h-64 overflow-auto">
                   {searchResults.length > 0 ? (
                     searchResults.map(app => (
                       <button
@@ -104,13 +116,68 @@ export function AppLayout() {
                   )}
                 </div>
               )}
+
+              {/* Application Selector */}
+              <div className="hidden lg:block relative">
+                <button
+                  onClick={() => setAppSelectorOpen(!appSelectorOpen)}
+                  className="flex items-center gap-2 rounded-xl border border-border/40 bg-muted/30 px-3 py-1.5 text-xs font-medium text-foreground hover:border-primary/30 transition-colors"
+                >
+                  <Building2 className="h-3.5 w-3.5 text-primary" />
+                  <span className="max-w-[160px] truncate">
+                    {selectedApplication ? selectedApplication.company : "Select Application"}
+                  </span>
+                  <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform ${appSelectorOpen ? "rotate-180" : ""}`} />
+                </button>
+                <AnimatePresence>
+                  {appSelectorOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      className="absolute top-full left-0 mt-1 w-72 bg-popover border border-border rounded-xl shadow-xl z-50 max-h-80 overflow-auto"
+                    >
+                      <div className="p-2">
+                        <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold px-2 py-1">Applications</p>
+                        {companyApplications.map((app) => (
+                          <button
+                            key={app.id}
+                            onClick={() => handleSelectApp(app)}
+                            className={`flex items-center gap-3 w-full px-2.5 py-2 rounded-lg text-left transition-colors hover:bg-muted/50 ${
+                              selectedApplication?.id === app.id ? "bg-primary/10" : ""
+                            }`}
+                          >
+                            <div className="h-7 w-7 rounded-lg bg-muted/50 flex items-center justify-center shrink-0">
+                              <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-medium text-foreground truncate">{app.company}</p>
+                              <p className="text-[10px] text-muted-foreground">{app.sector} · ₹{app.loanAmount} Cr</p>
+                            </div>
+                            <span className={`ml-auto shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                              app.riskScore <= 40 ? "bg-risk-low/15 text-risk-low" :
+                              app.riskScore <= 65 ? "bg-risk-medium/15 text-risk-medium" :
+                              "bg-risk-high/15 text-risk-high"
+                            }`}>
+                              {app.riskScore}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
-            <div className="flex items-center gap-3">
+
+            <div className="flex items-center gap-2">
               <ThemeToggle />
-              <div className="h-6 w-px bg-border" />
+              <div className="h-5 w-px bg-border/50" />
+
+              {/* Notifications */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="relative p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                  <button className="relative p-2 rounded-xl hover:bg-muted/50 transition-colors">
                     <Bell className="h-4 w-4 text-muted-foreground" />
                     {unreadCount > 0 && (
                       <span className="absolute top-1 right-1 h-4 w-4 rounded-full bg-risk-high text-[9px] font-bold text-white flex items-center justify-center animate-pulse">
@@ -119,7 +186,7 @@ export function AppLayout() {
                     )}
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-80">
+                <DropdownMenuContent align="end" className="w-80 rounded-xl">
                   <DropdownMenuLabel className="flex items-center justify-between">
                     <span className="text-xs font-semibold">Notifications</span>
                     {unreadCount > 0 && (
@@ -143,12 +210,12 @@ export function AppLayout() {
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
-              <div className="h-6 w-px bg-border" />
+              <div className="h-5 w-px bg-border/50" />
 
-              {/* Hamburger Menu */}
+              {/* Hamburger */}
               <Sheet>
                 <SheetTrigger asChild>
-                  <button className="p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                  <button className="p-2 rounded-xl hover:bg-muted/50 transition-colors">
                     <Menu className="h-4 w-4 text-muted-foreground" />
                   </button>
                 </SheetTrigger>
@@ -161,7 +228,7 @@ export function AppLayout() {
                       <button
                         key={item.label}
                         onClick={() => navigate(item.url)}
-                        className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                        className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm transition-colors ${
                           location.pathname === item.url ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                         }`}
                       >
@@ -170,7 +237,7 @@ export function AppLayout() {
                       </button>
                     ))}
                     <div className="border-t border-border/50 my-3" />
-                    <button onClick={handleLogout} className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50">
+                    <button onClick={handleLogout} className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50">
                       <LogOut className="h-4 w-4" />
                       Sign Out
                     </button>
@@ -178,7 +245,7 @@ export function AppLayout() {
                 </SheetContent>
               </Sheet>
 
-              <span className="text-xs text-muted-foreground hidden md:block">v2.1.0</span>
+              <span className="text-[10px] text-muted-foreground hidden md:block font-mono">v2.1.0</span>
             </div>
           </header>
           <main className="flex-1 overflow-auto p-6">

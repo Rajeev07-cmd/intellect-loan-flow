@@ -55,16 +55,16 @@ export function AppSidebar() {
   const initials = userName.split(" ").map(n => n[0]).join("");
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-border/50">
+    <Sidebar collapsible="icon" className="border-r border-border/30">
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 border border-primary/20">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 border border-primary/20">
             <Zap className="h-5 w-5 text-primary" />
           </div>
           {!collapsed && (
             <div>
               <h2 className="text-sm font-bold text-foreground tracking-tight">Intelli-Credit</h2>
-              <p className="text-[10px] text-muted-foreground">Credit Appraisal Platform</p>
+              <p className="text-[10px] text-muted-foreground">Credit Platform</p>
             </div>
           )}
         </div>
@@ -72,7 +72,7 @@ export function AppSidebar() {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-muted-foreground/60">Main</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-muted-foreground/60 px-3">Main</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {mainItems.map((item) => (
@@ -90,7 +90,7 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-muted-foreground/60">Tools</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-muted-foreground/60 px-3">Tools</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {toolItems.map((item) => (
@@ -109,7 +109,7 @@ export function AppSidebar() {
 
         {adminItems.length > 0 && (
           <SidebarGroup>
-            <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-muted-foreground/60">Admin</SidebarGroupLabel>
+            <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-muted-foreground/60 px-3">Admin</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {adminItems.map((item) => (
@@ -130,8 +130,8 @@ export function AppSidebar() {
 
       <SidebarFooter className="p-3">
         {!collapsed && (
-          <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/30">
-            <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-semibold text-primary">{initials}</div>
+          <div className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/20 border border-border/20">
+            <div className="h-8 w-8 rounded-full bg-primary/15 flex items-center justify-center text-xs font-semibold text-primary">{initials}</div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-foreground truncate">{userName}</p>
               <p className="text-[10px] text-muted-foreground">{userRole}</p>
