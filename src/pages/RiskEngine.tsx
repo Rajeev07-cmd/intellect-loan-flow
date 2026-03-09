@@ -313,15 +313,19 @@ export default function RiskEngine() {
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="glass-card p-6">
         <h3 className="text-sm font-semibold text-foreground mb-4">Financial Ratios</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {[
-            { label: "Revenue", value: selectedApplication.financials.revenue },
-            { label: "DSCR", value: `${selectedApplication.financials.dscr}x` },
-            { label: "Debt/Equity", value: `${selectedApplication.financials.debtEquity}x` },
-            { label: "Interest Coverage", value: `${selectedApplication.financials.interestCoverage}x` },
-            { label: "Current Ratio", value: `${selectedApplication.financials.currentRatio}x` },
-            { label: "Outstanding Debt", value: selectedApplication.financials.outstandingDebt },
-            { label: "CIBIL Score", value: selectedApplication.cibilScore.toString() },
-            { label: "Default Prob", value: `${(selectedApplication.defaultProbability * 100).toFixed(0)}%` },
+          {(() => {
+            const fin = (selectedApplication as any).financials ?? {};
+            const app = selectedApplication as any;
+            return [
+              { label: "Revenue", value: fin.revenue ?? "—" },
+              { label: "DSCR", value: fin.dscr != null ? `${fin.dscr}x` : "—" },
+              { label: "Debt/Equity", value: fin.debtEquity != null ? `${fin.debtEquity}x` : "—" },
+              { label: "Interest Coverage", value: fin.interestCoverage != null ? `${fin.interestCoverage}x` : "—" },
+              { label: "Current Ratio", value: fin.currentRatio != null ? `${fin.currentRatio}x` : "—" },
+              { label: "Outstanding Debt", value: fin.outstandingDebt ?? "—" },
+              { label: "CIBIL Score", value: (app.cibilScore ?? "—").toString() },
+              { label: "Default Prob", value: app.defaultProbability != null ? `${(app.defaultProbability * 100).toFixed(0)}%` : "—" },
+            ];
           ].map(r => (
             <div key={r.label} className="p-4 bg-muted/20 rounded-xl text-center border border-border/30">
               <p className="text-xl font-bold text-foreground">{r.value}</p>
