@@ -257,6 +257,12 @@ export default function DocumentVerification() {
         </div>
       </div>
 
+      <ProcessingBanner
+        state={verifying ? "processing" : verifyComplete ? "success" : "idle"}
+        processingText="Verifying compliance documents..."
+        successText="Documents Verified ✔"
+      />
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: "Total Documents", value: docs.length, icon: File, color: "text-primary" },
