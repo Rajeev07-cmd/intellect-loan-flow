@@ -390,11 +390,7 @@ export function NewApplicationWizard({ open, onOpenChange, onSuccess }: NewAppli
                         ["Company Name", formData.company_name],
                         ["Sector", formData.sector],
                         ["Loan Amount", `₹${formData.loan_amount} Cr`],
-                        ["CIN", formData.cin || "Auto-generated"],
-                        ["Incorporation Year", formData.incorporation_year || "—"],
-                        ["Registered Address", formData.registered_address || "—"],
-                        ["Promoter Group", formData.promoter_group || "—"],
-                        ["Contact Person", formData.contact_person || "—"],
+                        ["Official Email", formData.company_email],
                       ].map(([label, value]) => (
                         <div key={label} className="py-1.5 border-b border-border/20">
                           <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>
@@ -402,12 +398,6 @@ export function NewApplicationWizard({ open, onOpenChange, onSuccess }: NewAppli
                         </div>
                       ))}
                     </div>
-                    {formData.business_description && (
-                      <div className="mt-3 pt-2 border-t border-border/20">
-                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Business Description</span>
-                        <p className="text-sm text-foreground mt-0.5">{formData.business_description}</p>
-                      </div>
-                    )}
                   </CardContent>
                 </Card>
 
