@@ -114,6 +114,7 @@ export default function CreditOfficerDashboard() {
           <p className="text-sm text-muted-foreground mt-1">Credit analysis workspace — {kpis.total} active applications</p>
         </div>
         <div className="flex items-center gap-2">
+          <AIProcessingIndicator active={!isEmpty} />
           {hasLiveData && (
             <Badge variant="outline" className="gap-1.5 text-xs border-risk-low/30 text-risk-low animate-pulse">
               <Activity className="h-3 w-3" /> Real-time
