@@ -1156,6 +1156,71 @@ function ManagerReviewPanel({ onBackToQueue }: { onBackToQueue: () => void }) {
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Decision Pipeline Progress */}
+          <AnimatePresence>
+            {pipelineStage !== "idle" && pipelineStage !== "done" && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mt-4"
+              >
+                <Card className="border-primary/30 bg-primary/5">
+                  <CardContent className="p-4 space-y-3">
+                    <p className="text-xs font-semibold text-primary flex items-center gap-2">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Decision Pipeline Active
+                    </p>
+                    <div className="space-y-2">
+                      {[
+                        { key: "saving", label: "Saving Manager Decision", icon: Shield },
+                        { key: "generating_cam", label: "Auto-Generating CAM Report", icon: FileCheck },
+                        { key: "notifying", label: "Sending Notifications", icon: Send },
+                      ].map((step) => {
+                        const stages = ["saving", "generating_cam", "notifying", "done"];
+                        const currentIdx = stages.indexOf(pipelineStage);
+                        const stepIdx = stages.indexOf(step.key);
+                        const isComplete = currentIdx > stepIdx;
+                        const isActive = currentIdx === stepIdx;
+
+                        return (
+                          <div key={step.key} className="flex items-center gap-3">
+                            {isComplete ? (
+                              <CheckCircle2 className="h-4 w-4 text-risk-low shrink-0" />
+                            ) : isActive ? (
+                              <Loader2 className="h-4 w-4 text-primary animate-spin shrink-0" />
+                            ) : (
+                              <Clock className="h-4 w-4 text-muted-foreground/40 shrink-0" />
+                            )}
+                            <span className={`text-xs ${isComplete ? "text-risk-low" : isActive ? "text-primary font-medium" : "text-muted-foreground/50"}`}>
+                              {step.label}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {pipelineStage === "done" && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="mt-4"
+            >
+              <Card className="border-risk-low/30 bg-risk-low/5">
+                <CardContent className="p-4 text-center">
+                  <CheckCircle2 className="h-6 w-6 text-risk-low mx-auto mb-2" />
+                  <p className="text-sm font-semibold text-risk-low">Pipeline Complete</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">Decision recorded · CAM generated · Notifications sent</p>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
         </motion.div>
       </div>
     </div>
