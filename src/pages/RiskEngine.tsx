@@ -66,20 +66,20 @@ export default function RiskEngine() {
 
   if (!selectedApplication) return <NoApplicationSelected />;
 
-  const fiveCsScores = selectedApplication.fiveCsScores ?? [];
-  const overallScore = fiveCsScores.reduce((sum, c) => sum + c.contribution, 0);
+  const fiveCsScores = (selectedApplication as any).fiveCsScores ?? [];
+  const overallScore = Array.isArray(fiveCsScores) ? fiveCsScores.reduce((sum: number, c: any) => sum + (c.contribution ?? 0), 0) : 0;
 
-  const radarData = fiveCsScores.map(c => ({
+  const radarData = Array.isArray(fiveCsScores) ? fiveCsScores.map((c: any) => ({
     subject: c.name,
     score: c.score,
     fullMark: 100,
-  }));
+  })) : [];
 
-  const riskFactorData = fiveCsScores.map(c => ({
+  const riskFactorData = Array.isArray(fiveCsScores) ? fiveCsScores.map((c: any) => ({
     name: c.name,
     contribution: c.contribution,
     score: c.score,
-  }));
+  })) : [];
 
   return (
     <div className="space-y-6">
