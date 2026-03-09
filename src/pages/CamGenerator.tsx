@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useApplicationStore } from "@/store/useApplicationStore";
 import { ActiveApplicationBanner, NoApplicationSelected } from "@/components/ActiveApplicationBanner";
 import { saveCamReport, getCamReport } from "@/services/camReports";
+import { generateCam, getCamReport as getCamFromGenService } from "@/services/camGeneration";
 import { logAuditEvent } from "@/services/auditLog";
 import { createNotification } from "@/services/notifications";
 import { ProcessingBanner } from "@/components/ui/processing-status";
