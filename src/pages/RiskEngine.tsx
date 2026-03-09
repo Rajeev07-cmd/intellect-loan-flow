@@ -13,6 +13,7 @@ import { runRiskAnalysis, type RiskAnalysisResult } from "@/services/riskAnalysi
 import { logAuditEvent } from "@/services/auditLog";
 import { createNotification } from "@/services/notifications";
 import { useApiCall } from "@/hooks/useApiCall";
+import { ProcessingBanner } from "@/components/ui/processing-status";
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   BarChart, Bar, XAxis, YAxis, Cell, ResponsiveContainer, Tooltip as RechartsTooltip,
@@ -22,12 +23,15 @@ export default function RiskEngine() {
   const { selectedApplication } = useApplicationStore();
   const { toast } = useToast();
   const [liveResult, setLiveResult] = useState<RiskAnalysisResult | null>(null);
+  const [riskComplete, setRiskComplete] = useState(false);
 
   const { loading: analyzing, usingFallback, execute: executeRiskAnalysis } = useApiCall(
     runRiskAnalysis,
     {
       onSuccess: async (result) => {
         setLiveResult(result);
+        setRiskComplete(true);
+        setTimeout(() => setRiskComplete(false), 5000);
         toast({ title: "ML Model Response", description: `Risk Score: ${result.risk_score} — ${result.risk_category}` });
         // Log audit
         if (selectedApplication) {
@@ -87,6 +91,13 @@ export default function RiskEngine() {
         <h1 className="text-2xl font-bold text-foreground">Risk Scoring Engine</h1>
         <p className="text-sm text-muted-foreground mt-1">{selectedApplication.company} — Five Cs Analysis with Explainable AI</p>
       </div>
+
+      {/* Processing Banner */}
+      <ProcessingBanner
+        state={analyzing ? "processing" : riskComplete ? "success" : "idle"}
+        processingText="Running AI Risk Model..."
+        successText="Risk Analysis Completed ✔"
+      />
 
       {/* API Status + Run Model */}
       <div className="flex items-center gap-3">

@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useRealtimeApplications, DbApp } from "@/hooks/useRealtimeApplications";
 import { supabase } from "@/integrations/supabase/client";
+import { AIProcessingIndicator } from "@/components/ui/processing-status";
 import {
   AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip as RechartsTooltip,
   PieChart, Pie, Cell,
@@ -113,6 +114,7 @@ export default function CreditOfficerDashboard() {
           <p className="text-sm text-muted-foreground mt-1">Credit analysis workspace — {kpis.total} active applications</p>
         </div>
         <div className="flex items-center gap-2">
+          <AIProcessingIndicator active={!isEmpty} />
           {hasLiveData && (
             <Badge variant="outline" className="gap-1.5 text-xs border-risk-low/30 text-risk-low animate-pulse">
               <Activity className="h-3 w-3" /> Real-time

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Brain, Newspaper, Scale, TrendingUp, User, Search, AlertCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useApplicationStore } from "@/store/useApplicationStore";
 import { ActiveApplicationBanner, NoApplicationSelected } from "@/components/ActiveApplicationBanner";
+import { ProcessingBanner } from "@/components/ui/processing-status";
 
 type Sentiment = "Positive" | "Negative" | "Neutral";
 
@@ -50,6 +51,8 @@ function TimelineItem({ item, index }: { item: { headline: string; source: strin
 
 export default function AIResearch() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [researching, setResearching] = useState(false);
+  const [researchComplete, setResearchComplete] = useState(false);
   const { toast } = useToast();
   const { selectedApplication } = useApplicationStore();
 
@@ -103,8 +106,18 @@ export default function AIResearch() {
           <h1 className="text-2xl font-bold text-foreground">Company Intelligence</h1>
           <p className="text-sm text-muted-foreground mt-1">{app.company} — AI-powered research insights</p>
         </div>
-        <Button variant="outline" size="sm" className="gap-2" onClick={() => toast({ title: "Refreshing", description: "Fetching latest intelligence data..." })}>
-          <Brain className="h-4 w-4" /> Refresh Intelligence
+        <Button variant="outline" size="sm" className="gap-2" onClick={() => {
+          setResearching(true);
+          setResearchComplete(false);
+          toast({ title: "Refreshing", description: "Analyzing external intelligence..." });
+          setTimeout(() => {
+            setResearching(false);
+            setResearchComplete(true);
+            toast({ title: "Complete", description: "Research insights ready." });
+            setTimeout(() => setResearchComplete(false), 5000);
+          }, 3000);
+        }}>
+          <Brain className="h-4 w-4" /> {researching ? "Analyzing..." : "Run Research Agent"}
         </Button>
       </div>
 
@@ -114,6 +127,12 @@ export default function AIResearch() {
           <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search intelligence reports..." className="border-0 bg-transparent h-auto p-0 text-sm focus-visible:ring-0" />
         </div>
       </div>
+
+      <ProcessingBanner
+        state={researching ? "processing" : researchComplete ? "success" : "idle"}
+        processingText="Analyzing external intelligence..."
+        successText="Research Insights Ready ✔"
+      />
 
       {hasNoData ? (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-12 text-center">

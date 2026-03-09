@@ -12,6 +12,7 @@ import { ActiveApplicationBanner, NoApplicationSelected } from "@/components/Act
 import { saveCamReport, getCamReport } from "@/services/camReports";
 import { logAuditEvent } from "@/services/auditLog";
 import { createNotification } from "@/services/notifications";
+import { ProcessingBanner } from "@/components/ui/processing-status";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -212,6 +213,8 @@ export default function CamGenerator() {
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [shareNote, setShareNote] = useState("");
   const [sharing, setSharing] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [genComplete, setGenComplete] = useState(false);
 
   if (!selectedApplication) return <NoApplicationSelected />;
 
@@ -310,6 +313,11 @@ export default function CamGenerator() {
   return (
     <div className="space-y-6">
       <ActiveApplicationBanner />
+      <ProcessingBanner
+        state={generating ? "processing" : genComplete ? "success" : (exporting ? "processing" : "idle")}
+        processingText={exporting ? `Generating ${exporting}...` : "Generating Credit Appraisal Memo..."}
+        successText="CAM Generated Successfully ✔"
+      />
 
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
