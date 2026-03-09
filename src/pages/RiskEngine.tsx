@@ -30,6 +30,8 @@ export default function RiskEngine() {
     {
       onSuccess: async (result) => {
         setLiveResult(result);
+        setRiskComplete(true);
+        setTimeout(() => setRiskComplete(false), 5000);
         toast({ title: "ML Model Response", description: `Risk Score: ${result.risk_score} — ${result.risk_category}` });
         // Log audit
         if (selectedApplication) {
