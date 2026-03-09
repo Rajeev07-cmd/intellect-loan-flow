@@ -65,6 +65,7 @@ export default function DocumentVerification() {
   
   const [docs, setDocs] = useState<DocFile[]>([]);
   const [verifying, setVerifying] = useState(false);
+  const [verifyComplete, setVerifyComplete] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [dbConnected, setDbConnected] = useState(false);
