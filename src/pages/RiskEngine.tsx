@@ -92,6 +92,13 @@ export default function RiskEngine() {
         <p className="text-sm text-muted-foreground mt-1">{selectedApplication.company} — Five Cs Analysis with Explainable AI</p>
       </div>
 
+      {/* Processing Banner */}
+      <ProcessingBanner
+        state={analyzing ? "processing" : riskComplete ? "success" : "idle"}
+        processingText="Running AI Risk Model..."
+        successText="Risk Analysis Completed ✔"
+      />
+
       {/* API Status + Run Model */}
       <div className="flex items-center gap-3">
         {usingFallback && (

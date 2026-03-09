@@ -128,6 +128,12 @@ export default function AIResearch() {
         </div>
       </div>
 
+      <ProcessingBanner
+        state={researching ? "processing" : researchComplete ? "success" : "idle"}
+        processingText="Analyzing external intelligence..."
+        successText="Research Insights Ready ✔"
+      />
+
       {hasNoData ? (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-12 text-center">
           <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
