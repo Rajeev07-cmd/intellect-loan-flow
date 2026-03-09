@@ -9,8 +9,8 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { useApplicationStore, type CompanyApplication } from "@/store/useApplicationStore";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 import { NewApplicationWizard } from "@/components/applications/NewApplicationWizard";
+import { mapDbApplicationToStoreApp } from "@/lib/applicationMapper";
 
 interface DbApplication {
   id: string;
@@ -30,56 +30,6 @@ interface DbApplication {
   promoter_group: string | null;
   cibil_score: number | null;
   created_at: string;
-}
-
-function mapDbToApp(db: DbApplication): CompanyApplication {
-  return {
-    id: db.id,
-    company: db.company_name,
-    cin: db.cin || "N/A",
-    sector: db.sector,
-    loanAmount: db.loan_amount,
-    riskScore: db.risk_score ?? 50,
-    riskCategory: (db.risk_category as "Low" | "Medium" | "High") || "Medium",
-    status: db.status,
-    defaultProbability: db.default_probability ?? 0.25,
-    recommendation: db.recommendation || "Under Review",
-    interestRate: db.interest_rate || "11.5%",
-    suggestedLimit: db.suggested_limit || `₹${db.loan_amount} Cr`,
-    incorporationYear: db.incorporation_year || "2000",
-    registeredOffice: db.registered_address || "India",
-    promoterGroup: db.promoter_group || "N/A",
-    cibilScore: db.cibil_score ?? 700,
-    financials: {
-      revenue: "₹0 Cr", outstandingDebt: "₹0 Cr", dscr: 1.5, debtEquity: 1.0,
-      relatedPartyTransactions: "₹0 Cr", gstMismatch: false, gstMismatchAmount: "₹0",
-      interestCoverage: 2.0, currentRatio: 1.5,
-    },
-    fiveCsScores: [
-      { name: "Character", score: 70, weight: 20, contribution: 14, explanation: "Pending analysis" },
-      { name: "Capacity", score: 65, weight: 25, contribution: 16.25, explanation: "Pending analysis" },
-      { name: "Capital", score: 60, weight: 20, contribution: 12, explanation: "Pending analysis" },
-      { name: "Collateral", score: 70, weight: 15, contribution: 10.5, explanation: "Pending analysis" },
-      { name: "Conditions", score: 65, weight: 20, contribution: 13, explanation: "Pending analysis" },
-    ],
-    documents: [],
-    validations: [
-      { check: "PAN-GSTIN Match", status: "warning" as const, detail: "Pending verification" },
-      { check: "CIN Format", status: "warning" as const, detail: "Pending verification" },
-    ],
-    integrityScore: 0,
-    researchFindings: [],
-    explainableAI: [{ severity: "medium" as const, text: "Risk analysis pending" }],
-    pipeline: [
-      { stage: "Application Created", status: "completed" as const, date: new Date(db.created_at).toLocaleDateString() },
-      { stage: "Documents Uploaded", status: "pending" as const, date: "—" },
-      { stage: "Verification", status: "pending" as const, date: "—" },
-      { stage: "Risk Analysis", status: "pending" as const, date: "—" },
-      { stage: "CAM Generated", status: "pending" as const, date: "—" },
-      { stage: "Manager Review", status: "pending" as const, date: "—" },
-    ],
-    comments: [],
-  };
 }
 
 export default function Applications() {
