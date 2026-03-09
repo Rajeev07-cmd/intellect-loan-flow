@@ -349,6 +349,10 @@ export default function CamGenerator() {
           <p className="text-sm text-muted-foreground mt-1">{app.company} — Generated on {new Date().toLocaleDateString()}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <Button size="sm" className="gap-2 rounded-xl bg-primary" onClick={handleAIGenerate} disabled={generating}>
+            {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            {generating ? "AI Generating..." : "Generate with AI"}
+          </Button>
           <Button variant="outline" size="sm" className="gap-2 rounded-xl" disabled={exporting === "PDF"} onClick={handleExportPDF}>
             {exporting === "PDF" ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />} Export PDF
           </Button>
@@ -359,7 +363,7 @@ export default function CamGenerator() {
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : savedToDb ? <CheckCircle className="h-4 w-4" /> : <Save className="h-4 w-4" />}
             {saving ? "Saving..." : savedToDb ? "Saved" : "Save to DB"}
           </Button>
-          <Button size="sm" className="gap-2 rounded-xl" onClick={() => setShareDialogOpen(true)}>
+          <Button size="sm" variant="outline" className="gap-2 rounded-xl" onClick={() => setShareDialogOpen(true)}>
             <Share2 className="h-4 w-4" /> Share
           </Button>
         </div>
