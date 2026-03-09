@@ -304,29 +304,10 @@ export function NewApplicationWizard({ open, onOpenChange, onSuccess }: NewAppli
                     <Label htmlFor="loan_amount">Loan Amount (₹ Cr) *</Label>
                     <Input id="loan_amount" type="number" value={formData.loan_amount} onChange={e => handleChange("loan_amount", e.target.value)} placeholder="e.g., 500" className="mt-1.5" />
                   </div>
-                  <div>
-                    <Label htmlFor="cin">CIN (optional)</Label>
-                    <Input id="cin" value={formData.cin} onChange={e => handleChange("cin", e.target.value)} placeholder="Auto-generated if empty" className="mt-1.5 font-mono text-sm" />
-                  </div>
-                  <div>
-                    <Label htmlFor="incorporation_year">Incorporation Year</Label>
-                    <Input id="incorporation_year" value={formData.incorporation_year} onChange={e => handleChange("incorporation_year", e.target.value)} placeholder="e.g., 1998" className="mt-1.5" />
-                  </div>
                   <div className="col-span-2">
-                    <Label htmlFor="registered_address">Registered Address</Label>
-                    <Input id="registered_address" value={formData.registered_address} onChange={e => handleChange("registered_address", e.target.value)} placeholder="e.g., Mumbai, Maharashtra" className="mt-1.5" />
-                  </div>
-                  <div>
-                    <Label htmlFor="contact_person">Contact Person</Label>
-                    <Input id="contact_person" value={formData.contact_person} onChange={e => handleChange("contact_person", e.target.value)} placeholder="e.g., Rajesh Kumar" className="mt-1.5" />
-                  </div>
-                  <div>
-                    <Label htmlFor="promoter_group">Promoter Group</Label>
-                    <Input id="promoter_group" value={formData.promoter_group} onChange={e => handleChange("promoter_group", e.target.value)} placeholder="e.g., Ambani Group" className="mt-1.5" />
-                  </div>
-                  <div className="col-span-2">
-                    <Label htmlFor="business_description">Business Description</Label>
-                    <Textarea id="business_description" value={formData.business_description} onChange={e => handleChange("business_description", e.target.value)} placeholder="Brief description of business operations..." className="mt-1.5 min-h-[80px]" />
+                    <Label htmlFor="company_email" className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" /> Official Email ID *</Label>
+                    <Input id="company_email" type="email" value={formData.company_email} onChange={e => handleChange("company_email", e.target.value)} placeholder="e.g., finance@reliance.com" className="mt-1.5" />
+                    <p className="text-xs text-muted-foreground mt-1">Decision notifications and CAM will be sent to this email</p>
                   </div>
                 </div>
               </motion.div>
