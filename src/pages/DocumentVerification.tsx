@@ -16,6 +16,7 @@ import { ActiveApplicationBanner, NoApplicationSelected } from "@/components/Act
 import { supabase } from "@/integrations/supabase/client";
 import { logAuditEvent } from "@/services/auditLog";
 import { createNotification } from "@/services/notifications";
+import { ProcessingBanner } from "@/components/ui/processing-status";
 
 interface DocFile {
   id: string;
