@@ -41,7 +41,6 @@ export default function Applications() {
   
   const { setSelectedApplication } = useApplicationStore();
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   const fetchApplications = useCallback(async () => {
     setLoading(true);
@@ -52,7 +51,7 @@ export default function Applications() {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setApplications((data || []).map(mapDbToApp));
+      setApplications((data || []).map(mapDbApplicationToStoreApp));
     } catch (error) {
       console.error("Error fetching applications:", error);
       setApplications([]);
