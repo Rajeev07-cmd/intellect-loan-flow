@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   Upload, FileCheck, AlertTriangle, XCircle, File, Trash2, 
   CheckCircle2, ShieldCheck, RotateCcw, Loader2, Wifi, WifiOff,
-  CloudUpload, FileText, Image, FileType
+  CloudUpload, FileText, Image, FileType, Sparkles
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { logAuditEvent } from "@/services/auditLog";
 import { createNotification } from "@/services/notifications";
 import { ProcessingBanner } from "@/components/ui/processing-status";
+import { extractDocumentFields, verifyDocuments, runFullPipeline, type VerificationResult } from "@/services/documentProcessing";
 
 interface DocFile {
   id: string;
