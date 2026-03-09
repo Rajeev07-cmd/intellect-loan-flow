@@ -313,6 +313,11 @@ export default function CamGenerator() {
   return (
     <div className="space-y-6">
       <ActiveApplicationBanner />
+      <ProcessingBanner
+        state={generating ? "processing" : genComplete ? "success" : (exporting ? "processing" : "idle")}
+        processingText={exporting ? `Generating ${exporting}...` : "Generating Credit Appraisal Memo..."}
+        successText="CAM Generated Successfully ✔"
+      />
 
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
