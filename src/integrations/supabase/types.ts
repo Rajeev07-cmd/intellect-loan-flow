@@ -171,7 +171,7 @@ export type Database = {
           {
             foreignKeyName: "cam_reports_application_id_fkey"
             columns: ["application_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "applications"
             referencedColumns: ["id"]
           },
@@ -466,7 +466,7 @@ export type Database = {
           {
             foreignKeyName: "workflow_status_application_id_fkey"
             columns: ["application_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "applications"
             referencedColumns: ["id"]
           },
