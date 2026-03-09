@@ -106,8 +106,18 @@ export default function AIResearch() {
           <h1 className="text-2xl font-bold text-foreground">Company Intelligence</h1>
           <p className="text-sm text-muted-foreground mt-1">{app.company} — AI-powered research insights</p>
         </div>
-        <Button variant="outline" size="sm" className="gap-2" onClick={() => toast({ title: "Refreshing", description: "Fetching latest intelligence data..." })}>
-          <Brain className="h-4 w-4" /> Refresh Intelligence
+        <Button variant="outline" size="sm" className="gap-2" onClick={() => {
+          setResearching(true);
+          setResearchComplete(false);
+          toast({ title: "Refreshing", description: "Analyzing external intelligence..." });
+          setTimeout(() => {
+            setResearching(false);
+            setResearchComplete(true);
+            toast({ title: "Complete", description: "Research insights ready." });
+            setTimeout(() => setResearchComplete(false), 5000);
+          }, 3000);
+        }}>
+          <Brain className="h-4 w-4" /> {researching ? "Analyzing..." : "Run Research Agent"}
         </Button>
       </div>
 
