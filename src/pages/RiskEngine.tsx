@@ -325,10 +325,19 @@ export default function RiskEngine() {
               { label: "Outstanding Debt", value: fin.outstandingDebt ?? "—" },
               { label: "CIBIL Score", value: (app.cibilScore ?? "—").toString() },
               { label: "Default Prob", value: app.defaultProbability != null ? `${(app.defaultProbability * 100).toFixed(0)}%` : "—" },
-            ];
-          ].map(r => (
-            <div key={r.label} className="p-4 bg-muted/20 rounded-xl text-center border border-border/30">
-              <p className="text-xl font-bold text-foreground">{r.value}</p>
+            ].map(r => (
+              <div key={r.label} className="p-4 bg-muted/20 rounded-xl text-center border border-border/30">
+                <p className="text-xl font-bold text-foreground">{r.value}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">{r.label}</p>
+              </div>
+            ));
+          })()}
+        </div>
+      </motion.div>
+
+    </div>
+  );
+}
               <p className="text-[10px] text-muted-foreground mt-1">{r.label}</p>
             </div>
           ))}
