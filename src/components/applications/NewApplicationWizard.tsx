@@ -165,14 +165,10 @@ export function NewApplicationWizard({ open, onOpenChange, onSuccess }: NewAppli
         .insert({
           user_id: user?.id || null,
           company_name: formData.company_name,
-          cin: formData.cin || `U${Math.floor(10000 + Math.random() * 90000)}MH${new Date().getFullYear()}PLC${Math.floor(100000 + Math.random() * 900000)}`,
+          cin: `U${Math.floor(10000 + Math.random() * 90000)}MH${new Date().getFullYear()}PLC${Math.floor(100000 + Math.random() * 900000)}`,
           sector: formData.sector,
           loan_amount: parseFloat(formData.loan_amount),
-          business_description: formData.business_description || null,
-          registered_address: formData.registered_address || null,
-          contact_person: formData.contact_person || null,
-          incorporation_year: formData.incorporation_year || null,
-          promoter_group: formData.promoter_group || null,
+          company_email: formData.company_email,
           status: "Documents Uploaded",
           suggested_limit: `₹${formData.loan_amount} Cr`,
         })
