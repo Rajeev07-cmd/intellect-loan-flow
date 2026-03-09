@@ -81,6 +81,8 @@ export default function RiskEngine() {
     <div className="space-y-6">
       <ActiveApplicationBanner />
 
+      <WorkflowProgress />
+
       <div>
         <h1 className="text-2xl font-bold text-foreground">Risk Scoring Engine</h1>
         <p className="text-sm text-muted-foreground mt-1">{selectedApplication.company} — Five Cs Analysis with Explainable AI</p>
