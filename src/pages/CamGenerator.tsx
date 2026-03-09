@@ -213,6 +213,8 @@ export default function CamGenerator() {
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [shareNote, setShareNote] = useState("");
   const [sharing, setSharing] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [genComplete, setGenComplete] = useState(false);
 
   if (!selectedApplication) return <NoApplicationSelected />;
 
