@@ -13,6 +13,7 @@ import { runRiskAnalysis, type RiskAnalysisResult } from "@/services/riskAnalysi
 import { logAuditEvent } from "@/services/auditLog";
 import { createNotification } from "@/services/notifications";
 import { useApiCall } from "@/hooks/useApiCall";
+import { ProcessingBanner } from "@/components/ui/processing-status";
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   BarChart, Bar, XAxis, YAxis, Cell, ResponsiveContainer, Tooltip as RechartsTooltip,
