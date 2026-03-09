@@ -292,7 +292,7 @@ export default function RiskEngine() {
           <h3 className="text-sm font-semibold text-foreground">Explainable AI — "Why this score?"</h3>
         </div>
         <div className="space-y-3">
-          {selectedApplication.explainableAI.map((item, i) => (
+          {((selectedApplication as any).explainableAI ?? []).map((item: any, i: number) => (
             <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 + i * 0.05 }}
               className={`flex items-start gap-3 p-3.5 rounded-xl border ${
                 item.severity === "high" ? "bg-risk-high/5 border-risk-high/20" :
