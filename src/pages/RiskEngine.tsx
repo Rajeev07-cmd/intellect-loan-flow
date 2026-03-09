@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 
-import { Info, Brain, TrendingUp, AlertTriangle, Loader2, Wifi, WifiOff } from "lucide-react";
+import { Info, Brain, Loader2, Wifi, WifiOff } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,7 +33,6 @@ export default function RiskEngine() {
         setRiskComplete(true);
         setTimeout(() => setRiskComplete(false), 5000);
         toast({ title: "ML Model Response", description: `Risk Score: ${result.risk_score} — ${result.risk_category}` });
-        // Log audit
         if (selectedApplication) {
           const isUUID = /^[0-9a-f]{8}-/i.test(selectedApplication.id);
           if (isUUID) {
@@ -66,25 +65,44 @@ export default function RiskEngine() {
 
   if (!selectedApplication) return <NoApplicationSelected />;
 
-  const fiveCsScores = (selectedApplication as any).fiveCsScores ?? [];
-  const overallScore = Array.isArray(fiveCsScores) ? fiveCsScores.reduce((sum: number, c: any) => sum + (c.contribution ?? 0), 0) : 0;
+  const app = selectedApplication as any;
+  const fiveCsScores: any[] = Array.isArray(app.fiveCsScores) ? app.fiveCsScores : [];
+  const explainableAI: any[] = Array.isArray(app.explainableAI) ? app.explainableAI : [];
+  const fin = app.financials ?? {};
 
-  const radarData = Array.isArray(fiveCsScores) ? fiveCsScores.map((c: any) => ({
+  const overallScore = fiveCsScores.reduce((sum, c) => sum + (c.contribution ?? 0), 0);
+
+  const radarData = fiveCsScores.map((c) => ({
     subject: c.name,
     score: c.score,
     fullMark: 100,
-  })) : [];
+  }));
 
-  const riskFactorData = Array.isArray(fiveCsScores) ? fiveCsScores.map((c: any) => ({
+  const riskFactorData = fiveCsScores.map((c) => ({
     name: c.name,
     contribution: c.contribution,
     score: c.score,
-  })) : [];
+  }));
+
+  const riskScore = app.riskScore ?? 50;
+  const riskCategory = app.riskCategory ?? "—";
+  const defaultProbability = app.defaultProbability ?? 0;
+  const cibilScore = app.cibilScore ?? "—";
+
+  const ratios = [
+    { label: "Revenue", value: fin.revenue ?? "—" },
+    { label: "DSCR", value: fin.dscr != null ? `${fin.dscr}x` : "—" },
+    { label: "Debt/Equity", value: fin.debtEquity != null ? `${fin.debtEquity}x` : "—" },
+    { label: "Interest Coverage", value: fin.interestCoverage != null ? `${fin.interestCoverage}x` : "—" },
+    { label: "Current Ratio", value: fin.currentRatio != null ? `${fin.currentRatio}x` : "—" },
+    { label: "Outstanding Debt", value: fin.outstandingDebt ?? "—" },
+    { label: "CIBIL Score", value: String(cibilScore) },
+    { label: "Default Prob", value: defaultProbability != null ? `${(defaultProbability * 100).toFixed(0)}%` : "—" },
+  ];
 
   return (
     <div className="space-y-6">
       <ActiveApplicationBanner />
-
       <WorkflowProgress />
 
       <div>
@@ -156,10 +174,10 @@ export default function RiskEngine() {
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Risk Score", value: (selectedApplication as any).riskScore ?? "—", color: ((selectedApplication as any).riskScore ?? 50) <= 40 ? "text-risk-low" : ((selectedApplication as any).riskScore ?? 50) <= 65 ? "text-risk-medium" : "text-risk-high" },
-          { label: "Risk Category", value: (selectedApplication as any).riskCategory ?? "—", color: "text-foreground" },
-          { label: "Default Probability", value: `${(((selectedApplication as any).defaultProbability ?? 0) * 100).toFixed(0)}%`, color: "text-foreground" },
-          { label: "CIBIL Score", value: (selectedApplication as any).cibilScore ?? "—", color: "text-foreground" },
+          { label: "Risk Score", value: riskScore, color: riskScore <= 40 ? "text-risk-low" : riskScore <= 65 ? "text-risk-medium" : "text-risk-high" },
+          { label: "Risk Category", value: riskCategory, color: "text-foreground" },
+          { label: "Default Probability", value: `${(defaultProbability * 100).toFixed(0)}%`, color: "text-foreground" },
+          { label: "CIBIL Score", value: cibilScore, color: "text-foreground" },
         ].map((kpi, i) => (
           <motion.div key={kpi.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
             className="glass-card p-5"
@@ -175,23 +193,20 @@ export default function RiskEngine() {
         {/* Radar Chart */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-6">
           <h3 className="text-sm font-semibold text-foreground mb-4">Five Cs Radar</h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="75%">
-                <PolarGrid stroke="hsl(var(--border))" />
-                <PolarAngleAxis dataKey="subject" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
-                <PolarRadiusAxis angle={90} domain={[0, 100]} tick={false} axisLine={false} />
-                <Radar
-                  name="Score"
-                  dataKey="score"
-                  stroke="hsl(var(--primary))"
-                  fill="hsl(var(--primary))"
-                  fillOpacity={0.2}
-                  strokeWidth={2}
-                />
-              </RadarChart>
-            </ResponsiveContainer>
-          </div>
+          {radarData.length > 0 ? (
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="75%">
+                  <PolarGrid stroke="hsl(var(--border))" />
+                  <PolarAngleAxis dataKey="subject" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
+                  <PolarRadiusAxis angle={90} domain={[0, 100]} tick={false} axisLine={false} />
+                  <Radar name="Score" dataKey="score" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.2} strokeWidth={2} />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="h-64 flex items-center justify-center text-xs text-muted-foreground">Run Risk Analysis to populate</div>
+          )}
         </motion.div>
 
         {/* Score Ring */}
@@ -211,7 +226,7 @@ export default function RiskEngine() {
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className={`text-4xl font-bold ${overallScore <= 40 ? "text-risk-high" : overallScore <= 65 ? "text-risk-medium" : "text-risk-low"}`}>
-                {overallScore.toFixed(1)}
+                {overallScore > 0 ? overallScore.toFixed(1) : riskScore}
               </span>
               <span className="text-[10px] text-muted-foreground mt-1">out of 100</span>
             </div>
@@ -226,145 +241,100 @@ export default function RiskEngine() {
         {/* Contribution Bar */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="glass-card p-6">
           <h3 className="text-sm font-semibold text-foreground mb-4">Risk Factor Contribution</h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={riskFactorData} layout="vertical" margin={{ left: 10, right: 10 }}>
-                <XAxis type="number" domain={[0, 25]} hide />
-                <YAxis
-                  type="category" dataKey="name"
-                  tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                  width={80} axisLine={false} tickLine={false}
-                />
-                <RechartsTooltip
-                  contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 12, color: "hsl(var(--popover-foreground))", fontSize: 12 }}
-                  formatter={(value: number) => [`${value.toFixed(1)}`, "Contribution"]}
-                />
-                <Bar dataKey="contribution" radius={[0, 6, 6, 0]} barSize={16}>
-                  {riskFactorData.map((entry, i) => (
-                    <Cell key={i} fill={entry.score >= 70 ? "hsl(var(--risk-low))" : entry.score >= 50 ? "hsl(var(--risk-medium))" : "hsl(var(--risk-high))"} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          {riskFactorData.length > 0 ? (
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={riskFactorData} layout="vertical" margin={{ left: 10, right: 10 }}>
+                  <XAxis type="number" domain={[0, 25]} hide />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} width={80} axisLine={false} tickLine={false} />
+                  <RechartsTooltip
+                    contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 12, color: "hsl(var(--popover-foreground))", fontSize: 12 }}
+                    formatter={(value: number) => [`${value.toFixed(1)}`, "Contribution"]}
+                  />
+                  <Bar dataKey="contribution" radius={[0, 6, 6, 0]} barSize={16}>
+                    {riskFactorData.map((entry, i) => (
+                      <Cell key={i} fill={entry.score >= 70 ? "hsl(var(--risk-low))" : entry.score >= 50 ? "hsl(var(--risk-medium))" : "hsl(var(--risk-high))"} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="h-64 flex items-center justify-center text-xs text-muted-foreground">Run Risk Analysis to populate</div>
+          )}
         </motion.div>
       </div>
 
       {/* Five Cs Detail */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="glass-card p-6">
-        <h3 className="text-sm font-semibold text-foreground mb-5">Five Cs Breakdown</h3>
-        <div className="space-y-4">
-          {fiveCsScores.map((c, i) => (
-            <motion.div key={c.name} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.08 }}>
-              <div className="flex items-center justify-between mb-1.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-foreground">{c.name}</span>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger><Info className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
-                      <TooltipContent side="right" className="max-w-xs"><p className="text-xs">{c.explanation}</p></TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+      {fiveCsScores.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="glass-card p-6">
+          <h3 className="text-sm font-semibold text-foreground mb-5">Five Cs Breakdown</h3>
+          <div className="space-y-4">
+            {fiveCsScores.map((c, i) => (
+              <motion.div key={c.name} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.08 }}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-foreground">{c.name}</span>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger><Info className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
+                        <TooltipContent side="right" className="max-w-xs"><p className="text-xs">{c.explanation}</p></TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                    <span>Score: <strong className="text-foreground">{c.score}</strong></span>
+                    <span>Weight: {c.weight}%</span>
+                    <span>Contrib: <strong className="text-foreground">{c.contribution.toFixed(1)}</strong></span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                  <span>Score: <strong className="text-foreground">{c.score}</strong></span>
-                  <span>Weight: {c.weight}%</span>
-                  <span>Contrib: <strong className="text-foreground">{c.contribution.toFixed(1)}</strong></span>
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${c.score}%` }}
+                    transition={{ delay: i * 0.1, duration: 0.6 }}
+                    className={`h-full rounded-full ${c.score >= 70 ? "bg-risk-low" : c.score >= 50 ? "bg-risk-medium" : "bg-risk-high"}`}
+                  />
                 </div>
-              </div>
-              <div className="h-2 bg-muted rounded-full overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${c.score}%` }}
-                  transition={{ delay: i * 0.1, duration: 0.6 }}
-                  className={`h-full rounded-full ${c.score >= 70 ? "bg-risk-low" : c.score >= 50 ? "bg-risk-medium" : "bg-risk-high"}`}
-                />
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </motion.div>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      )}
 
       {/* Explainable AI */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="glass-card p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Brain className="h-5 w-5 text-primary" />
-          <h3 className="text-sm font-semibold text-foreground">Explainable AI — "Why this score?"</h3>
-        </div>
-        <div className="space-y-3">
-          {((selectedApplication as any).explainableAI ?? []).map((item: any, i: number) => (
-            <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 + i * 0.05 }}
-              className={`flex items-start gap-3 p-3.5 rounded-xl border ${
-                item.severity === "high" ? "bg-risk-high/5 border-risk-high/20" :
-                item.severity === "medium" ? "bg-risk-medium/5 border-risk-medium/20" :
-                "bg-risk-low/5 border-risk-low/20"
-              }`}
-            >
-              <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
-                item.severity === "high" ? "bg-risk-high" : item.severity === "medium" ? "bg-risk-medium" : "bg-risk-low"
-              }`} />
-              <p className="text-sm text-foreground">{item.text}</p>
-            </motion.div>
-          ))}
-        </div>
-      </motion.div>
+      {explainableAI.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="glass-card p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Brain className="h-5 w-5 text-primary" />
+            <h3 className="text-sm font-semibold text-foreground">Explainable AI — "Why this score?"</h3>
+          </div>
+          <div className="space-y-3">
+            {explainableAI.map((item, i) => (
+              <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 + i * 0.05 }}
+                className={`flex items-start gap-3 p-3.5 rounded-xl border ${
+                  item.severity === "high" ? "bg-risk-high/5 border-risk-high/20" :
+                  item.severity === "medium" ? "bg-risk-medium/5 border-risk-medium/20" :
+                  "bg-risk-low/5 border-risk-low/20"
+                }`}
+              >
+                <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
+                  item.severity === "high" ? "bg-risk-high" : item.severity === "medium" ? "bg-risk-medium" : "bg-risk-low"
+                }`} />
+                <p className="text-sm text-foreground">{item.text}</p>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      )}
 
       {/* Financial Ratios */}
-      {(() => {
-        const fin = (selectedApplication as any).financials ?? {};
-        const app = selectedApplication as any;
-        const ratios = [
-          { label: "Revenue", value: fin.revenue ?? "—" },
-          { label: "DSCR", value: fin.dscr != null ? `${fin.dscr}x` : "—" },
-          { label: "Debt/Equity", value: fin.debtEquity != null ? `${fin.debtEquity}x` : "—" },
-          { label: "Interest Coverage", value: fin.interestCoverage != null ? `${fin.interestCoverage}x` : "—" },
-          { label: "Current Ratio", value: fin.currentRatio != null ? `${fin.currentRatio}x` : "—" },
-          { label: "Outstanding Debt", value: fin.outstandingDebt ?? "—" },
-          { label: "CIBIL Score", value: String(app.cibilScore ?? "—") },
-          { label: "Default Prob", value: app.defaultProbability != null ? `${(app.defaultProbability * 100).toFixed(0)}%` : "—" },
-        ];
-        return (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="glass-card p-6">
-            <h3 className="text-sm font-semibold text-foreground mb-4">Financial Ratios</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {ratios.map(r => (
-                <div key={r.label} className="p-4 bg-muted/20 rounded-xl text-center border border-border/30">
-                  <p className="text-xl font-bold text-foreground">{r.value}</p>
-                  <p className="text-[10px] text-muted-foreground mt-1">{r.label}</p>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        );
-      })()}
-
-    </div>
-  );
-}
-            const fin = (selectedApplication as any).financials ?? {};
-            const app = selectedApplication as any;
-            return [
-              { label: "Revenue", value: fin.revenue ?? "—" },
-              { label: "DSCR", value: fin.dscr != null ? `${fin.dscr}x` : "—" },
-              { label: "Debt/Equity", value: fin.debtEquity != null ? `${fin.debtEquity}x` : "—" },
-              { label: "Interest Coverage", value: fin.interestCoverage != null ? `${fin.interestCoverage}x` : "—" },
-              { label: "Current Ratio", value: fin.currentRatio != null ? `${fin.currentRatio}x` : "—" },
-              { label: "Outstanding Debt", value: fin.outstandingDebt ?? "—" },
-              { label: "CIBIL Score", value: (app.cibilScore ?? "—").toString() },
-              { label: "Default Prob", value: app.defaultProbability != null ? `${(app.defaultProbability * 100).toFixed(0)}%` : "—" },
-            ].map(r => (
-              <div key={r.label} className="p-4 bg-muted/20 rounded-xl text-center border border-border/30">
-                <p className="text-xl font-bold text-foreground">{r.value}</p>
-                <p className="text-[10px] text-muted-foreground mt-1">{r.label}</p>
-              </div>
-            ));
-          })()}
-        </div>
-      </motion.div>
-
-    </div>
-  );
-}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="glass-card p-6">
+        <h3 className="text-sm font-semibold text-foreground mb-4">Financial Ratios</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {ratios.map(r => (
+            <div key={r.label} className="p-4 bg-muted/20 rounded-xl text-center border border-border/30">
+              <p className="text-xl font-bold text-foreground">{r.value}</p>
               <p className="text-[10px] text-muted-foreground mt-1">{r.label}</p>
             </div>
           ))}
