@@ -1,23 +1,5 @@
-import { apiClient } from "./api";
 import { supabase } from "@/integrations/supabase/client";
 import { updateWorkflowStatus } from "./workflowStatus";
-
-export interface ProcessedDocument {
-  revenue: number;
-  profit: number;
-  outstanding_debt: number;
-  litigation_mentions: number;
-  total_assets?: number;
-  total_liabilities?: number;
-  directors?: string[];
-}
-
-export interface VerificationResult {
-  document_integrity_score: number;
-  pan_gstin_match: boolean;
-  cin_valid: boolean;
-  director_mismatch: boolean;
-}
 
 export interface DocumentMetadata {
   id: string;
@@ -31,30 +13,17 @@ export interface DocumentMetadata {
   created_at: string;
 }
 
-export interface OcrResult {
-  text: string;
-  confidence: number;
-  fields: Record<string, string>;
+export interface VerificationResult {
+  document_integrity_score: number;
+  checks: { check: string; status: "pass" | "warning" | "fail"; detail: string }[];
+  pan_gstin_match: boolean;
+  cin_valid: boolean;
+  overall_status: "verified" | "issues_found";
 }
 
-export interface ExtractedFeatures {
-  profit_margin?: number;
-  debt_ratio?: number;
-  interest_coverage_ratio?: number;
-  revenue_growth?: number;
-}
-
-// Legacy functions for backward compatibility
-export async function processDocument(file: File): Promise<ProcessedDocument> {
-  const formData = new FormData();
-  formData.append("file", file);
-  return apiClient.postFormData<ProcessedDocument>("/api/process-document", formData);
-}
-
-export async function verifyDocuments(applicationId: string): Promise<VerificationResult> {
-  return apiClient.post<VerificationResult>("/api/verify-documents", {
-    application_id: applicationId,
-  });
+export interface ExtractedFields {
+  fields_count: number;
+  fields: { field_name: string; field_value: string; confidence_score: number }[];
 }
 
 // Get documents for an application
@@ -90,8 +59,7 @@ export async function uploadDocument(
   documentType: string
 ): Promise<DocumentMetadata | null> {
   const filePath = `${applicationId}/${Date.now()}_${file.name}`;
-  
-  // Upload to storage
+
   const { data: uploadData, error: uploadError } = await supabase.storage
     .from("documents")
     .upload(filePath, file);
@@ -101,14 +69,12 @@ export async function uploadDocument(
     throw uploadError;
   }
 
-  // Get public URL
   const { data: urlData } = supabase.storage
     .from("documents")
     .getPublicUrl(uploadData.path);
 
   const { data: userData } = await supabase.auth.getUser();
 
-  // Save metadata
   const { data: docData, error: docError } = await supabase
     .from("documents")
     .insert({
@@ -129,7 +95,6 @@ export async function uploadDocument(
     throw docError;
   }
 
-  // Update workflow status
   await updateWorkflowStatus(applicationId, "Documents Uploaded");
 
   return {
@@ -145,64 +110,49 @@ export async function uploadDocument(
   };
 }
 
-// Process document via backend OCR service
-export async function processDocumentOcr(documentId: string): Promise<OcrResult> {
-  try {
-    const result = await apiClient.post<OcrResult>("/api/process-document", {
-      document_id: documentId,
-    });
+// Extract fields from a document via AI
+export async function extractDocumentFields(
+  documentId: string,
+  applicationId: string,
+  documentName: string,
+  fileUrl: string
+): Promise<ExtractedFields> {
+  const { data, error } = await supabase.functions.invoke("extract-document-fields", {
+    body: { document_id: documentId, application_id: applicationId, document_name: documentName, file_url: fileUrl },
+  });
 
-    // Update verification status
-    await supabase
-      .from("documents")
-      .update({ verification_status: "verified" })
-      .eq("id", documentId);
-
-    return result;
-  } catch (error) {
-    console.error("OCR processing failed:", error);
-    throw error;
-  }
+  if (error) throw new Error(error.message || "Field extraction failed");
+  if (data.error) throw new Error(data.error);
+  return data as ExtractedFields;
 }
 
-// Extract financial features from documents
-export async function extractFeatures(applicationId: string): Promise<ExtractedFeatures> {
-  try {
-    const features = await apiClient.post<ExtractedFeatures>("/api/extract-features", {
-      application_id: applicationId,
-    });
+// Verify all documents for an application via AI
+export async function verifyDocuments(applicationId: string): Promise<VerificationResult> {
+  const { data, error } = await supabase.functions.invoke("verify-documents", {
+    body: { application_id: applicationId },
+  });
 
-    // Save to financial_features table
-    await supabase.from("financial_features").upsert({
-      application_id: applicationId,
-      profit_margin: features.profit_margin,
-      debt_ratio: features.debt_ratio,
-      interest_coverage_ratio: features.interest_coverage_ratio,
-      revenue_growth: features.revenue_growth,
-    }, { onConflict: "application_id" });
-
-    return features;
-  } catch (error) {
-    console.error("Feature extraction failed:", error);
-    throw error;
-  }
+  if (error) throw new Error(error.message || "Verification failed");
+  if (data.error) throw new Error(data.error);
+  return data as VerificationResult;
 }
 
-// Verify all documents for an application
-export async function verifyAllDocuments(applicationId: string): Promise<void> {
-  await supabase
-    .from("documents")
-    .update({ verification_status: "verified" })
-    .eq("application_id", applicationId)
-    .eq("verification_status", "pending");
+// Run full processing pipeline
+export async function runFullPipeline(
+  applicationId: string,
+  steps?: string[]
+): Promise<any> {
+  const { data, error } = await supabase.functions.invoke("process-pipeline", {
+    body: { application_id: applicationId, steps },
+  });
 
-  // Update workflow
-  await updateWorkflowStatus(applicationId, "Verification Completed");
+  if (error) throw new Error(error.message || "Pipeline failed");
+  if (data.error) throw new Error(data.error);
+  return data;
 }
 
 // Delete document
 export async function deleteDocument(documentId: string): Promise<boolean> {
-  // Get document info first
   const { data: doc } = await supabase
     .from("documents")
     .select("file_path")
@@ -210,11 +160,9 @@ export async function deleteDocument(documentId: string): Promise<boolean> {
     .single();
 
   if (doc?.file_path) {
-    // Delete from storage
     await supabase.storage.from("documents").remove([doc.file_path]);
   }
 
-  // Delete metadata
   const { error } = await supabase
     .from("documents")
     .delete()

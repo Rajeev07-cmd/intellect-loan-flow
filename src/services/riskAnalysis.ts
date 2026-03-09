@@ -1,4 +1,3 @@
-import { apiClient } from "./api";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface RiskAnalysisInput {
@@ -11,11 +10,38 @@ export interface RiskAnalysisInput {
   collateral_score: number;
 }
 
+export interface FiveCsScore {
+  name: string;
+  score: number;
+  weight: number;
+  contribution: number;
+  explanation: string;
+}
+
 export interface RiskAnalysisResult {
   risk_score: number;
   risk_category: "Low" | "Medium" | "High";
   default_probability: number;
   explanation: string[];
+  five_cs_scores?: FiveCsScore[];
+}
+
+// Run risk analysis via edge function
+export async function runRiskAnalysis(
+  input: RiskAnalysisInput,
+  applicationId?: string
+): Promise<RiskAnalysisResult> {
+  const { data, error } = await supabase.functions.invoke("run-risk-analysis", {
+    body: { ...input, application_id: applicationId },
+  });
+
+  if (error) {
+    console.error("Risk analysis error:", error);
+    throw new Error(error.message || "Risk analysis failed");
+  }
+
+  if (data.error) throw new Error(data.error);
+  return data as RiskAnalysisResult;
 }
 
 // Save financial features to database
@@ -60,30 +86,6 @@ export async function getFinancialFeatures(
   };
 }
 
-// Save risk results to database
-export async function saveRiskResults(
-  applicationId: string,
-  results: RiskAnalysisResult
-): Promise<void> {
-  const { error } = await supabase.from("risk_results").upsert({
-    application_id: applicationId,
-    risk_score: results.risk_score,
-    risk_category: results.risk_category,
-    default_probability: results.default_probability,
-    explanation: results.explanation,
-  }, { onConflict: "application_id" });
-
-  if (error) console.error("Error saving risk results:", error);
-
-  // Also update the main applications table
-  await supabase.from("applications").update({
-    risk_score: results.risk_score,
-    risk_category: results.risk_category,
-    default_probability: results.default_probability,
-    status: "Risk Analysis Completed",
-  }).eq("id", applicationId);
-}
-
 // Get risk results from database
 export async function getRiskResults(
   applicationId: string
@@ -102,28 +104,6 @@ export async function getRiskResults(
     default_probability: Number(data.default_probability) || 0,
     explanation: (data.explanation as string[]) || [],
   };
-}
-
-// Run risk analysis via backend ML service
-export async function runRiskAnalysis(
-  input: RiskAnalysisInput,
-  applicationId?: string
-): Promise<RiskAnalysisResult> {
-  try {
-    // Call the backend ML service
-    const result = await apiClient.post<RiskAnalysisResult>("/api/risk-analysis", input);
-
-    // If we have an application ID, save results to database
-    if (applicationId) {
-      await saveFinancialFeatures(applicationId, input);
-      await saveRiskResults(applicationId, result);
-    }
-
-    return result;
-  } catch (error) {
-    console.error("Backend ML service unavailable:", error);
-    throw error;
-  }
 }
 
 // Subscribe to real-time risk result updates
