@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
   Loader2, Building2, Upload, FileText, CheckCircle2, X, ChevronRight, ChevronLeft,
-  CloudUpload, AlertTriangle, Shield, FileCheck, Trash2, File, Image
+  CloudUpload, AlertTriangle, Shield, FileCheck, Trash2, File, Image, Mail
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
