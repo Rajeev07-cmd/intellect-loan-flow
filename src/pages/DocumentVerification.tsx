@@ -209,8 +209,9 @@ export default function DocumentVerification() {
 
   const runFullVerification = useCallback(async () => {
     setVerifying(true);
+    setVerifyComplete(false);
     toast({ title: "Verification Started", description: "Running full document verification..." });
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 3000));
     setDocs(prev => prev.map(d => d.status === "pending" ? { ...d, status: "verified" as const } : d));
     const pendingIds = docs.filter(d => d.status === "pending").map(d => d.id);
     if (pendingIds.length > 0) {
@@ -221,7 +222,9 @@ export default function DocumentVerification() {
     await logAuditEvent("Verification Completed", "All documents verified", selectedApplication!.id, "System");
     await createNotification("Verification Complete", `Document verification completed for ${selectedApplication!.company}`, "info", selectedApplication!.id);
     setVerifying(false);
+    setVerifyComplete(true);
     toast({ title: "Complete", description: "All pending documents verified." });
+    setTimeout(() => setVerifyComplete(false), 5000);
   }, [toast, docs, selectedApplication]);
 
   if (!selectedApplication) return <NoApplicationSelected />;
