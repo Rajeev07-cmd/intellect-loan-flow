@@ -22,6 +22,7 @@ export interface Application {
   contact_person?: string;
   incorporation_year?: string;
   promoter_group?: string;
+  company_email?: string;
   created_at: string;
   updated_at: string;
   user_id?: string;
