@@ -51,16 +51,20 @@ export default function RiskEngine() {
 
   const handleRunModel = async () => {
     if (!selectedApplication) return;
+    const isUUID = /^[0-9a-f]{8}-/i.test(selectedApplication.id);
     const fin = (selectedApplication as any).financials ?? {};
-    await executeRiskAnalysis({
-      revenue_growth: 0.12,
-      profit_margin: (fin.dscr ?? 1) > 1.5 ? 0.18 : 0.08,
-      debt_ratio: fin.debtEquity ?? 0.5,
-      interest_coverage_ratio: fin.interestCoverage ?? 2,
-      litigation_count: 1,
-      sector_risk: 0.5,
-      collateral_score: 0.7,
-    });
+    await executeRiskAnalysis(
+      {
+        revenue_growth: 0.12,
+        profit_margin: (fin.dscr ?? 1) > 1.5 ? 0.18 : 0.08,
+        debt_ratio: fin.debtEquity ?? 0.5,
+        interest_coverage_ratio: fin.interestCoverage ?? 2,
+        litigation_count: 1,
+        sector_risk: 0.5,
+        collateral_score: 0.7,
+      },
+      isUUID ? selectedApplication.id : undefined
+    );
   };
 
   if (!selectedApplication) return <NoApplicationSelected />;
