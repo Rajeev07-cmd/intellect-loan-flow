@@ -602,9 +602,12 @@ function ManagerReviewPanel({ onBackToQueue }: { onBackToQueue: () => void }) {
     setShowConfirmDialog(true);
   };
 
+  const [pipelineStage, setPipelineStage] = useState<"idle" | "saving" | "generating_cam" | "notifying" | "done">("idle");
+
   const handleConfirmDecision = async () => {
     setShowConfirmDialog(false);
     setSubmitting(true);
+    setPipelineStage("saving");
 
     const mgrDecisionMap: Record<string, ManagerDecision> = {
       approve: "approve", reject: "reject", conditional: "review", "re-review": "review"
@@ -614,16 +617,36 @@ function ManagerReviewPanel({ onBackToQueue }: { onBackToQueue: () => void }) {
     const isUUID = /^[0-9a-f]{8}-/i.test(app.id);
     if (isUUID) {
       try {
+        // Step 1: Save manager decision
         await submitManagerDecision(app.id, mgrDecision, app.company);
-        await supabase.from("applications").update({
-          suggested_limit: `₹${approvedAmount} Cr`,
+
+        // Step 2: Auto-generate CAM + notifications via edge function
+        setPipelineStage("generating_cam");
+        const result = await finalizeDecision({
+          application_id: app.id,
+          decision: mgrDecision === "review" ? "conditional" : mgrDecision,
+          approved_limit: `₹${approvedAmount} Cr`,
           interest_rate: `${interestRate}%`,
-          recommendation: decision === "approve" ? "Approved" : decision === "reject" ? "Rejected" : "Under Review",
-        }).eq("id", app.id);
+          officer_name: "Credit Manager",
+          reasons: selectedReasons,
+        });
+
+        setPipelineStage("notifying");
+        // Brief delay to show notification stage
+        await new Promise(r => setTimeout(r, 800));
+
         const ds = await getDecisionState(app.id);
         setDecisionState(ds);
+        setPipelineStage("done");
+
+        toast({
+          title: "✅ Decision Pipeline Complete",
+          description: result.message,
+        });
       } catch (e) {
-        console.error("Error saving decision:", e);
+        console.error("Error in decision pipeline:", e);
+        setPipelineStage("idle");
+        toast({ title: "Pipeline Error", description: "Decision saved but CAM generation may have failed.", variant: "destructive" });
       }
     }
 
@@ -632,12 +655,15 @@ function ManagerReviewPanel({ onBackToQueue }: { onBackToQueue: () => void }) {
     };
     const decisionLabel = decisionLabels[decision] || decision;
     const timeStr = new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-    setAuditTrail(prev => [{ time: timeStr, event: `Manager decision: ${decisionLabel} — ₹${approvedAmount} Cr at ${interestRate}%`, user: "Credit Manager" }, ...prev]);
+    setAuditTrail(prev => [
+      { time: timeStr, event: `CAM auto-generated and notifications sent`, user: "System" },
+      { time: timeStr, event: `Manager decision: ${decisionLabel} — ₹${approvedAmount} Cr at ${interestRate}%`, user: "Credit Manager" },
+      ...prev,
+    ]);
 
     setSubmitting(false);
     setSubmitted(true);
     setShowImpactSummary(true);
-    toast({ title: "Decision Submitted", description: `Final: ${decisionState.final_status || decisionLabel}` });
   };
 
   const handleSendComment = () => {
