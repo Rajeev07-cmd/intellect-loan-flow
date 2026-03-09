@@ -13,6 +13,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { getNotifications, markNotificationRead, markAllNotificationsRead, subscribeToNotifications, type Notification } from "@/services/notifications";
 import { useAuth } from "@/contexts/AuthContext";
+import { mapDbApplicationToStoreApp } from "@/lib/applicationMapper";
 
 function getTimeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -22,56 +23,6 @@ function getTimeAgo(dateStr: string): string {
   const hrs = Math.floor(mins / 60);
   if (hrs < 24) return `${hrs} hr ago`;
   return `${Math.floor(hrs / 24)}d ago`;
-}
-
-function mapDbToSelectorApp(db: any): CompanyApplication {
-  return {
-    id: db.id,
-    company: db.company_name,
-    cin: db.cin || "N/A",
-    sector: db.sector,
-    loanAmount: db.loan_amount,
-    riskScore: db.risk_score ?? 50,
-    riskCategory: (db.risk_category as "Low" | "Medium" | "High") || "Medium",
-    status: db.status,
-    defaultProbability: db.default_probability ?? 0.25,
-    recommendation: db.recommendation || "Under Review",
-    interestRate: db.interest_rate || "11.5%",
-    suggestedLimit: db.suggested_limit || `₹${db.loan_amount} Cr`,
-    incorporationYear: db.incorporation_year || "2000",
-    registeredOffice: db.registered_address || "India",
-    promoterGroup: db.promoter_group || "N/A",
-    cibilScore: db.cibil_score ?? 700,
-    financials: {
-      revenue: "₹0 Cr", outstandingDebt: "₹0 Cr", dscr: 1.5, debtEquity: 1.0,
-      relatedPartyTransactions: "₹0 Cr", gstMismatch: false, gstMismatchAmount: "₹0",
-      interestCoverage: 2.0, currentRatio: 1.5,
-    },
-    fiveCsScores: [
-      { name: "Character", score: 70, weight: 20, contribution: 14, explanation: "Pending analysis" },
-      { name: "Capacity", score: 65, weight: 25, contribution: 16.25, explanation: "Pending analysis" },
-      { name: "Capital", score: 60, weight: 20, contribution: 12, explanation: "Pending analysis" },
-      { name: "Collateral", score: 70, weight: 15, contribution: 10.5, explanation: "Pending analysis" },
-      { name: "Conditions", score: 65, weight: 20, contribution: 13, explanation: "Pending analysis" },
-    ],
-    documents: [],
-    validations: [
-      { check: "PAN-GSTIN Match", status: "warning" as const, detail: "Pending verification" },
-      { check: "CIN Format", status: "warning" as const, detail: "Pending verification" },
-    ],
-    integrityScore: 0,
-    researchFindings: [],
-    explainableAI: [{ severity: "medium" as const, text: "Risk analysis pending" }],
-    pipeline: [
-      { stage: "Application Created", status: "completed" as const, date: new Date().toLocaleDateString() },
-      { stage: "Documents", status: "pending" as const, date: "—" },
-      { stage: "Verification", status: "pending" as const, date: "—" },
-      { stage: "Risk Analysis", status: "pending" as const, date: "—" },
-      { stage: "CAM Generated", status: "pending" as const, date: "—" },
-      { stage: "Manager Review", status: "pending" as const, date: "—" },
-    ],
-    comments: [],
-  };
 }
 
 export function AppLayout() {
@@ -100,7 +51,7 @@ export function AppLayout() {
           .select("*")
           .order("created_at", { ascending: false });
         if (!error && data) {
-          setDbApps(data.map(mapDbToSelectorApp));
+          setDbApps(data.map(mapDbApplicationToStoreApp));
         }
       } catch (e) {
         // no data
