@@ -156,10 +156,10 @@ export default function RiskEngine() {
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Risk Score", value: (selectedApplication as any).riskScore ?? selectedApplication.risk_score ?? "—", color: ((selectedApplication as any).riskScore ?? selectedApplication.risk_score ?? 50) <= 40 ? "text-risk-low" : ((selectedApplication as any).riskScore ?? selectedApplication.risk_score ?? 50) <= 65 ? "text-risk-medium" : "text-risk-high" },
-          { label: "Risk Category", value: (selectedApplication as any).riskCategory ?? selectedApplication.risk_category ?? "—", color: "text-foreground" },
-          { label: "Default Probability", value: `${(((selectedApplication as any).defaultProbability ?? selectedApplication.default_probability ?? 0) * 100).toFixed(0)}%`, color: "text-foreground" },
-          { label: "CIBIL Score", value: (selectedApplication as any).cibilScore ?? selectedApplication.cibil_score ?? "—", color: "text-foreground" },
+          { label: "Risk Score", value: (selectedApplication as any).riskScore ?? "—", color: ((selectedApplication as any).riskScore ?? 50) <= 40 ? "text-risk-low" : ((selectedApplication as any).riskScore ?? 50) <= 65 ? "text-risk-medium" : "text-risk-high" },
+          { label: "Risk Category", value: (selectedApplication as any).riskCategory ?? "—", color: "text-foreground" },
+          { label: "Default Probability", value: `${(((selectedApplication as any).defaultProbability ?? 0) * 100).toFixed(0)}%`, color: "text-foreground" },
+          { label: "CIBIL Score", value: (selectedApplication as any).cibilScore ?? "—", color: "text-foreground" },
         ].map((kpi, i) => (
           <motion.div key={kpi.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
             className="glass-card p-5"
