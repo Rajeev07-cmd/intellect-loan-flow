@@ -208,25 +208,72 @@ export default function DocumentVerification() {
     }, 2500);
   }, [toast]);
 
+  const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
+  const [extracting, setExtracting] = useState(false);
+
   const runFullVerification = useCallback(async () => {
+    if (!selectedApplication) return;
+    const isUUID = /^[0-9a-f]{8}-/i.test(selectedApplication.id);
+    if (!isUUID) {
+      toast({ title: "Demo Application", description: "Verification only works with database applications." });
+      return;
+    }
+
     setVerifying(true);
     setVerifyComplete(false);
-    toast({ title: "Verification Started", description: "Running full document verification..." });
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    setDocs(prev => prev.map(d => d.status === "pending" ? { ...d, status: "verified" as const } : d));
-    const pendingIds = docs.filter(d => d.status === "pending").map(d => d.id);
-    if (pendingIds.length > 0) {
-      try {
-        await supabase.from("documents").update({ verification_status: "verified" }).in("id", pendingIds);
-      } catch (e) {}
+    toast({ title: "AI Verification Started", description: "Running document extraction and verification..." });
+
+    try {
+      // Step 1: Extract fields from all pending documents
+      const pendingDocs = docs.filter(d => d.status === "pending" && d.file_url);
+      for (const doc of pendingDocs) {
+        try {
+          await extractDocumentFields(doc.id, selectedApplication.id, doc.name, doc.file_url!);
+        } catch (e) {
+          console.error(`Extraction failed for ${doc.name}:`, e);
+        }
+      }
+
+      // Step 2: Verify extracted fields
+      const result = await verifyDocuments(selectedApplication.id);
+      setVerificationResult(result);
+
+      // Update local state
+      setDocs(prev => prev.map(d => d.status === "pending" ? { ...d, status: result.overall_status === "verified" ? "verified" as const : "pending" as const } : d));
+
+      await logAuditEvent("AI Verification Completed", `Integrity Score: ${result.document_integrity_score}`, selectedApplication.id, "AI Engine");
+      await createNotification("Verification Complete", `AI verification completed for ${selectedApplication.company}. Score: ${result.document_integrity_score}`, "info", selectedApplication.id);
+
+      toast({ title: "AI Verification Complete", description: `Integrity Score: ${result.document_integrity_score}/100` });
+    } catch (e: any) {
+      toast({ title: "Verification Failed", description: e.message || "Could not complete verification.", variant: "destructive" });
+    } finally {
+      setVerifying(false);
+      setVerifyComplete(true);
+      setTimeout(() => setVerifyComplete(false), 5000);
     }
-    await logAuditEvent("Verification Completed", "All documents verified", selectedApplication!.id, "System");
-    await createNotification("Verification Complete", `Document verification completed for ${selectedApplication!.company}`, "info", selectedApplication!.id);
-    setVerifying(false);
-    setVerifyComplete(true);
-    toast({ title: "Complete", description: "All pending documents verified." });
-    setTimeout(() => setVerifyComplete(false), 5000);
   }, [toast, docs, selectedApplication]);
+
+  const runPipeline = useCallback(async () => {
+    if (!selectedApplication) return;
+    const isUUID = /^[0-9a-f]{8}-/i.test(selectedApplication.id);
+    if (!isUUID) {
+      toast({ title: "Demo Application", description: "Pipeline only works with database applications." });
+      return;
+    }
+
+    setExtracting(true);
+    toast({ title: "Full Pipeline Started", description: "Running extraction → verification → risk → CAM..." });
+
+    try {
+      const result = await runFullPipeline(selectedApplication.id);
+      toast({ title: "Pipeline Complete", description: `All ${result.steps_completed.length} steps completed successfully.` });
+    } catch (e: any) {
+      toast({ title: "Pipeline Failed", description: e.message, variant: "destructive" });
+    } finally {
+      setExtracting(false);
+    }
+  }, [selectedApplication, toast]);
 
   if (!selectedApplication) return <NoApplicationSelected />;
 
