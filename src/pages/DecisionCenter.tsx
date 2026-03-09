@@ -603,7 +603,6 @@ function ManagerReviewPanel({ onBackToQueue }: { onBackToQueue: () => void }) {
     setShowConfirmDialog(true);
   };
 
-  const [pipelineStage, setPipelineStage] = useState<"idle" | "saving" | "generating_cam" | "notifying" | "done">("idle");
 
   const handleConfirmDecision = async () => {
     setShowConfirmDialog(false);
