@@ -51,6 +51,8 @@ function TimelineItem({ item, index }: { item: { headline: string; source: strin
 
 export default function AIResearch() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [researching, setResearching] = useState(false);
+  const [researchComplete, setResearchComplete] = useState(false);
   const { toast } = useToast();
   const { selectedApplication } = useApplicationStore();
 
