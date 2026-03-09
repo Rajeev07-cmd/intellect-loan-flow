@@ -298,9 +298,13 @@ export default function DocumentVerification() {
               <Wifi className="h-3 w-3" /> Cloud storage connected
             </Badge>
           )}
+          <Button variant="outline" className="gap-2" onClick={runPipeline} disabled={extracting || docs.length === 0}>
+            {extracting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            {extracting ? "Processing..." : "Run Full Pipeline"}
+          </Button>
           <Button className="gap-2" onClick={runFullVerification} disabled={verifying || pending === 0}>
             {verifying ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
-            {verifying ? "Verifying..." : "Run Full Verification"}
+            {verifying ? "Verifying..." : "AI Verify Documents"}
           </Button>
         </div>
       </div>
