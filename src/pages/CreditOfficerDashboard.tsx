@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useRealtimeApplications, DbApp } from "@/hooks/useRealtimeApplications";
 import { supabase } from "@/integrations/supabase/client";
+import { AIProcessingIndicator } from "@/components/ui/processing-status";
 import {
   AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip as RechartsTooltip,
   PieChart, Pie, Cell,
