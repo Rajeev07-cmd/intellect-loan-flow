@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useApplicationStore } from "@/store/useApplicationStore";
 import { ActiveApplicationBanner, NoApplicationSelected } from "@/components/ActiveApplicationBanner";
+import { WorkflowProgress } from "@/components/applications/WorkflowProgress";
 import { runRiskAnalysis, type RiskAnalysisResult } from "@/services/riskAnalysis";
 import { logAuditEvent } from "@/services/auditLog";
 import { createNotification } from "@/services/notifications";
