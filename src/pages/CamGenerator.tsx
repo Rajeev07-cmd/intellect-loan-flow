@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { FileDown, Share2, Download, Loader2, CheckCircle, XCircle, AlertTriangle, FileText, Shield, Building2, BarChart3, Gavel, Save, Copy } from "lucide-react";
+import { FileDown, Share2, Download, Loader2, CheckCircle, XCircle, AlertTriangle, FileText, Shield, Building2, BarChart3, Gavel, Save, Copy, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
