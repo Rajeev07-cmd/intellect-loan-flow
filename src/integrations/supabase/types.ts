@@ -19,6 +19,7 @@ export type Database = {
           business_description: string | null
           cibil_score: number | null
           cin: string | null
+          company_email: string | null
           company_name: string
           contact_person: string | null
           created_at: string
@@ -45,6 +46,7 @@ export type Database = {
           business_description?: string | null
           cibil_score?: number | null
           cin?: string | null
+          company_email?: string | null
           company_name: string
           contact_person?: string | null
           created_at?: string
@@ -71,6 +73,7 @@ export type Database = {
           business_description?: string | null
           cibil_score?: number | null
           cin?: string | null
+          company_email?: string | null
           company_name?: string
           contact_person?: string | null
           created_at?: string

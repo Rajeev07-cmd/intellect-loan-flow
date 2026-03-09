@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
   Loader2, Building2, Upload, FileText, CheckCircle2, X, ChevronRight, ChevronLeft,
-  CloudUpload, AlertTriangle, Shield, FileCheck, Trash2, File, Image
+  CloudUpload, AlertTriangle, Shield, FileCheck, Trash2, File, Image, Mail
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -93,9 +93,7 @@ export function NewApplicationWizard({ open, onOpenChange, onSuccess }: NewAppli
   const [activeCategory, setActiveCategory] = useState("");
 
   const [formData, setFormData] = useState({
-    company_name: "", cin: "", sector: "", loan_amount: "",
-    business_description: "", registered_address: "",
-    contact_person: "", incorporation_year: "", promoter_group: "",
+    company_name: "", sector: "", loan_amount: "", company_email: "",
   });
 
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
@@ -104,7 +102,7 @@ export function NewApplicationWizard({ open, onOpenChange, onSuccess }: NewAppli
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const step1Valid = formData.company_name && formData.sector && formData.loan_amount;
+  const step1Valid = formData.company_name && formData.sector && formData.loan_amount && formData.company_email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.company_email);
 
   const hasCategoryFile = (catTitle: string) =>
     uploadedFiles.some(f => f.category === catTitle && f.status === "uploaded");
@@ -167,14 +165,10 @@ export function NewApplicationWizard({ open, onOpenChange, onSuccess }: NewAppli
         .insert({
           user_id: user?.id || null,
           company_name: formData.company_name,
-          cin: formData.cin || `U${Math.floor(10000 + Math.random() * 90000)}MH${new Date().getFullYear()}PLC${Math.floor(100000 + Math.random() * 900000)}`,
+          cin: `U${Math.floor(10000 + Math.random() * 90000)}MH${new Date().getFullYear()}PLC${Math.floor(100000 + Math.random() * 900000)}`,
           sector: formData.sector,
           loan_amount: parseFloat(formData.loan_amount),
-          business_description: formData.business_description || null,
-          registered_address: formData.registered_address || null,
-          contact_person: formData.contact_person || null,
-          incorporation_year: formData.incorporation_year || null,
-          promoter_group: formData.promoter_group || null,
+          company_email: formData.company_email,
           status: "Documents Uploaded",
           suggested_limit: `₹${formData.loan_amount} Cr`,
         })
@@ -231,7 +225,7 @@ export function NewApplicationWizard({ open, onOpenChange, onSuccess }: NewAppli
 
       // Reset
       setStep(1);
-      setFormData({ company_name: "", cin: "", sector: "", loan_amount: "", business_description: "", registered_address: "", contact_person: "", incorporation_year: "", promoter_group: "" });
+      setFormData({ company_name: "", sector: "", loan_amount: "", company_email: "" });
       setUploadedFiles([]);
       onOpenChange(false);
       onSuccess();
@@ -310,29 +304,10 @@ export function NewApplicationWizard({ open, onOpenChange, onSuccess }: NewAppli
                     <Label htmlFor="loan_amount">Loan Amount (₹ Cr) *</Label>
                     <Input id="loan_amount" type="number" value={formData.loan_amount} onChange={e => handleChange("loan_amount", e.target.value)} placeholder="e.g., 500" className="mt-1.5" />
                   </div>
-                  <div>
-                    <Label htmlFor="cin">CIN (optional)</Label>
-                    <Input id="cin" value={formData.cin} onChange={e => handleChange("cin", e.target.value)} placeholder="Auto-generated if empty" className="mt-1.5 font-mono text-sm" />
-                  </div>
-                  <div>
-                    <Label htmlFor="incorporation_year">Incorporation Year</Label>
-                    <Input id="incorporation_year" value={formData.incorporation_year} onChange={e => handleChange("incorporation_year", e.target.value)} placeholder="e.g., 1998" className="mt-1.5" />
-                  </div>
                   <div className="col-span-2">
-                    <Label htmlFor="registered_address">Registered Address</Label>
-                    <Input id="registered_address" value={formData.registered_address} onChange={e => handleChange("registered_address", e.target.value)} placeholder="e.g., Mumbai, Maharashtra" className="mt-1.5" />
-                  </div>
-                  <div>
-                    <Label htmlFor="contact_person">Contact Person</Label>
-                    <Input id="contact_person" value={formData.contact_person} onChange={e => handleChange("contact_person", e.target.value)} placeholder="e.g., Rajesh Kumar" className="mt-1.5" />
-                  </div>
-                  <div>
-                    <Label htmlFor="promoter_group">Promoter Group</Label>
-                    <Input id="promoter_group" value={formData.promoter_group} onChange={e => handleChange("promoter_group", e.target.value)} placeholder="e.g., Ambani Group" className="mt-1.5" />
-                  </div>
-                  <div className="col-span-2">
-                    <Label htmlFor="business_description">Business Description</Label>
-                    <Textarea id="business_description" value={formData.business_description} onChange={e => handleChange("business_description", e.target.value)} placeholder="Brief description of business operations..." className="mt-1.5 min-h-[80px]" />
+                    <Label htmlFor="company_email" className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" /> Official Email ID *</Label>
+                    <Input id="company_email" type="email" value={formData.company_email} onChange={e => handleChange("company_email", e.target.value)} placeholder="e.g., finance@reliance.com" className="mt-1.5" />
+                    <p className="text-xs text-muted-foreground mt-1">Decision notifications and CAM will be sent to this email</p>
                   </div>
                 </div>
               </motion.div>
@@ -415,11 +390,7 @@ export function NewApplicationWizard({ open, onOpenChange, onSuccess }: NewAppli
                         ["Company Name", formData.company_name],
                         ["Sector", formData.sector],
                         ["Loan Amount", `₹${formData.loan_amount} Cr`],
-                        ["CIN", formData.cin || "Auto-generated"],
-                        ["Incorporation Year", formData.incorporation_year || "—"],
-                        ["Registered Address", formData.registered_address || "—"],
-                        ["Promoter Group", formData.promoter_group || "—"],
-                        ["Contact Person", formData.contact_person || "—"],
+                        ["Official Email", formData.company_email],
                       ].map(([label, value]) => (
                         <div key={label} className="py-1.5 border-b border-border/20">
                           <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>
@@ -427,12 +398,6 @@ export function NewApplicationWizard({ open, onOpenChange, onSuccess }: NewAppli
                         </div>
                       ))}
                     </div>
-                    {formData.business_description && (
-                      <div className="mt-3 pt-2 border-t border-border/20">
-                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Business Description</span>
-                        <p className="text-sm text-foreground mt-0.5">{formData.business_description}</p>
-                      </div>
-                    )}
                   </CardContent>
                 </Card>
 
