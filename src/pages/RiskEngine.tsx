@@ -32,19 +32,19 @@ export default function RiskEngine() {
         setLiveResult(result);
         setRiskComplete(true);
         setTimeout(() => setRiskComplete(false), 5000);
-        toast({ title: "ML Model Response", description: `Risk Score: ${result.risk_score} — ${result.risk_category}` });
+        toast({ title: "AI Risk Analysis Complete", description: `Risk Score: ${result.risk_score} — ${result.risk_category}` });
         if (selectedApplication) {
           const isUUID = /^[0-9a-f]{8}-/i.test(selectedApplication.id);
           if (isUUID) {
             await logAuditEvent("Risk Analysis Completed", `Risk Score: ${result.risk_score} — ${result.risk_category}`, selectedApplication.id, "System");
-            if (result.risk_score > 65) {
+            if (result.risk_score < 40) {
               await createNotification("High Risk Detected", `${selectedApplication.company} — Risk Score: ${result.risk_score}`, "error", selectedApplication.id);
             }
           }
         }
       },
-      onError: () => {
-        toast({ title: "Backend Unavailable", description: "Using pre-computed mock data. Start your FastAPI server to get live predictions.", variant: "destructive" });
+      onError: (err) => {
+        toast({ title: "Risk Analysis Failed", description: err.message || "Could not run risk analysis.", variant: "destructive" });
       },
     }
   );
