@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useApplicationStore } from "@/store/useApplicationStore";
 import { ActiveApplicationBanner, NoApplicationSelected } from "@/components/ActiveApplicationBanner";
+import { ProcessingBanner } from "@/components/ui/processing-status";
 
 type Sentiment = "Positive" | "Negative" | "Neutral";
 
