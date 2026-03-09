@@ -102,7 +102,7 @@ export function NewApplicationWizard({ open, onOpenChange, onSuccess }: NewAppli
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const step1Valid = formData.company_name && formData.sector && formData.loan_amount;
+  const step1Valid = formData.company_name && formData.sector && formData.loan_amount && formData.company_email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.company_email);
 
   const hasCategoryFile = (catTitle: string) =>
     uploadedFiles.some(f => f.category === catTitle && f.status === "uploaded");
