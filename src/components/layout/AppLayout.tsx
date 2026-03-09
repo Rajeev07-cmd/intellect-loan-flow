@@ -51,7 +51,7 @@ export function AppLayout() {
           .select("*")
           .order("created_at", { ascending: false });
         if (!error && data) {
-          setDbApps(data.map(mapDbToSelectorApp));
+          setDbApps(data.map(mapDbApplicationToStoreApp));
         }
       } catch (e) {
         // no data
