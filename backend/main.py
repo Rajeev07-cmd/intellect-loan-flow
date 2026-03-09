@@ -1,45 +1,81 @@
 """
 Intelli-Credit FastAPI Backend
 AI-Powered Corporate Credit Decisioning Platform
-
-Deploy this separately (Railway, Render, AWS, etc.)
-Frontend calls: http://localhost:5000 (or your deployed URL)
 """
 
-from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import List, Optional
+from __future__ import annotations
+
+import os
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
+
 import joblib
 import numpy as np
-from datetime import datetime
+from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
 
-# Initialize FastAPI app
 app = FastAPI(
     title="Intelli-Credit API",
     description="AI-Powered Corporate Credit Decisioning Platform",
-    version="1.0.0"
+    version="1.1.0",
 )
 
-# CORS - Allow frontend to call backend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify your frontend URL
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Load ML model at startup
-try:
-    risk_model = joblib.load("risk_analysis.pkl")
-    print("✅ ML Model loaded successfully")
-except FileNotFoundError:
-    risk_model = None
-    print("⚠️ ML Model not found - using fallback scoring")
+
+def _load_risk_model() -> Any:
+    model_name = "risk_analysis.pkl"
+    backend_dir = os.path.dirname(os.path.abspath(__file__))
+    candidate_paths = [
+        os.path.join(backend_dir, model_name),
+        os.path.join(os.getcwd(), model_name),
+        os.path.join(os.getcwd(), "backend", model_name),
+    ]
+
+    for path in candidate_paths:
+        if os.path.exists(path):
+            try:
+                model = joblib.load(path)
+                print(f"✅ ML model loaded from: {path}")
+                return model
+            except Exception as err:
+                print(f"⚠️ Failed loading model from {path}: {err}")
+
+    print("⚠️ risk_analysis.pkl not loaded; fallback scoring enabled")
+    return None
 
 
-# ============== PYDANTIC MODELS ==============
+risk_model = _load_risk_model()
+
+
+# ============== REQUEST / RESPONSE MODELS ==============
+
+class ApiResponse(BaseModel):
+    status: str = "success"
+    message: str
+    data: Optional[Dict[str, Any]] = None
+
+
+class CreateApplicationInput(BaseModel):
+    company_name: str = Field(..., min_length=2)
+    sector: str = Field(..., min_length=2)
+    loan_amount: float = Field(..., gt=0)
+
+
+class UploadDocumentInput(BaseModel):
+    application_id: str = Field(..., min_length=3)
+
+
+class VerificationInput(BaseModel):
+    application_id: str
+
 
 class RiskAnalysisInput(BaseModel):
     revenue_growth: float
@@ -50,45 +86,27 @@ class RiskAnalysisInput(BaseModel):
     sector_risk: float
     collateral_score: float
 
+
 class RiskAnalysisResult(BaseModel):
     risk_score: int
     risk_category: str
     default_probability: float
     explanation: List[str]
 
-class ProcessedDocument(BaseModel):
-    revenue: float
-    profit: float
-    outstanding_debt: float
-    litigation_mentions: int
-    total_assets: Optional[float] = None
-    total_liabilities: Optional[float] = None
-    directors: Optional[List[str]] = None
-
-class VerificationInput(BaseModel):
-    application_id: str
-
-class VerificationResult(BaseModel):
-    document_integrity_score: int
-    pan_gstin_match: bool
-    cin_valid: bool
-    director_mismatch: bool
 
 class CamGenerationInput(BaseModel):
     application_id: str
 
-class CamReport(BaseModel):
-    company_overview: str
-    financial_analysis: str
-    risk_analysis: str
-    recommendation: str
-    suggested_loan_limit: str
-    interest_rate: str
 
-class WorkflowStep(BaseModel):
-    stage: str
-    status: str  # "completed" | "active" | "pending"
-    date: str
+class FinalizeDecisionInput(BaseModel):
+    application_id: str
+    decision: str
+
+
+class CopilotQueryInput(BaseModel):
+    application_id: Optional[str] = None
+    question: str = Field(..., min_length=3)
+
 
 class ApplicationSummary(BaseModel):
     id: str
@@ -99,318 +117,220 @@ class ApplicationSummary(BaseModel):
     status: str
 
 
-# ============== IN-MEMORY DATABASE ==============
+class CamReport(BaseModel):
+    company_overview: str
+    financial_analysis: str
+    risk_analysis: str
+    recommendation: str
+    suggested_loan_limit: str
+    interest_rate: str
 
-applications_db = {
+
+# ============== LIGHTWEIGHT STORE (dev fallback) ==============
+
+applications_db: Dict[str, Dict[str, Any]] = {
     "app_001": {
         "id": "app_001",
         "company_name": "Reliance Industries",
         "sector": "Petrochemicals",
-        "loan_amount": 1200,
+        "loan_amount": 1200.0,
         "risk_score": 35,
         "status": "Under Review",
-        "financials": {
-            "revenue": 230000000000,
-            "profit": 25000000000,
-            "debt": 80000000000,
-        },
-        "workflow": [
-            {"stage": "Application Created", "status": "completed", "date": "Mar 1"},
-            {"stage": "Documents Uploaded", "status": "completed", "date": "Mar 2"},
-            {"stage": "Verification", "status": "completed", "date": "Mar 3"},
-            {"stage": "Risk Analysis", "status": "active", "date": "Mar 4"},
-            {"stage": "CAM Generated", "status": "pending", "date": "—"},
-            {"stage": "Manager Review", "status": "pending", "date": "—"},
-        ]
-    },
-    "app_002": {
-        "id": "app_002",
-        "company_name": "Tata Steel Ltd",
-        "sector": "Steel & Metals",
-        "loan_amount": 500,
-        "risk_score": 28,
-        "status": "Approved",
-        "financials": {
-            "revenue": 180000000000,
-            "profit": 18000000000,
-            "debt": 45000000000,
-        },
-        "workflow": [
-            {"stage": "Application Created", "status": "completed", "date": "Feb 15"},
-            {"stage": "Documents Uploaded", "status": "completed", "date": "Feb 16"},
-            {"stage": "Verification", "status": "completed", "date": "Feb 17"},
-            {"stage": "Risk Analysis", "status": "completed", "date": "Feb 18"},
-            {"stage": "CAM Generated", "status": "completed", "date": "Feb 19"},
-            {"stage": "Manager Review", "status": "completed", "date": "Feb 20"},
-        ]
+        "financials": {"revenue": 230000000000, "profit": 25000000000, "debt": 80000000000},
     }
 }
 
 
-# ============== API ENDPOINTS ==============
-
-@app.get("/")
-def root():
-    return {"message": "Intelli-Credit API", "status": "running", "model_loaded": risk_model is not None}
-
-
-@app.get("/api/applications", response_model=List[ApplicationSummary])
-def get_applications():
-    """Get all loan applications"""
-    return [
-        ApplicationSummary(
-            id=app["id"],
-            company_name=app["company_name"],
-            sector=app["sector"],
-            loan_amount=app["loan_amount"],
-            risk_score=app["risk_score"],
-            status=app["status"]
-        )
-        for app in applications_db.values()
-    ]
+def _fallback_score(input_data: RiskAnalysisInput) -> Tuple[int, float]:
+    score = 50
+    score += (input_data.debt_ratio - 0.5) * 40
+    score += 15 if input_data.interest_coverage_ratio < 1.5 else (-10 if input_data.interest_coverage_ratio > 3 else 0)
+    score -= input_data.profit_margin * 30
+    score += input_data.litigation_count * 5
+    score += input_data.sector_risk * 20
+    score -= input_data.collateral_score * 15
+    risk_score = max(0, min(100, int(score)))
+    return risk_score, risk_score / 100
 
 
-@app.post("/api/risk-analysis", response_model=RiskAnalysisResult)
-def run_risk_analysis(input_data: RiskAnalysisInput):
-    """
-    Run ML model prediction for credit risk
-    Returns risk score, category, default probability, and explanation
-    """
-    # Prepare feature vector
-    features = np.array([[
+def _risk_explanation(input_data: RiskAnalysisInput) -> List[str]:
+    factors: List[str] = []
+    if input_data.debt_ratio > 0.6:
+        factors.append("High debt ratio indicates elevated leverage risk")
+    if input_data.interest_coverage_ratio < 2:
+        factors.append("Low interest coverage ratio signals potential debt servicing issues")
+    if input_data.profit_margin < 0.1:
+        factors.append("Thin profit margins reduce buffer against volatility")
+    if input_data.litigation_count > 0:
+        factors.append(f"{input_data.litigation_count} ongoing litigation case(s) flagged")
+    if input_data.sector_risk > 0.5:
+        factors.append("Sector risk is moderate-to-high")
+    if input_data.collateral_score < 0.5:
+        factors.append("Weak collateral coverage")
+    return factors or ["Strong financial profile with balanced indicators"]
+
+
+def _run_risk_model(input_data: RiskAnalysisInput) -> RiskAnalysisResult:
+    features = np.array([[ 
         input_data.revenue_growth,
         input_data.profit_margin,
         input_data.debt_ratio,
         input_data.interest_coverage_ratio,
         input_data.litigation_count,
         input_data.sector_risk,
-        input_data.collateral_score
+        input_data.collateral_score,
     ]])
-    
-    # Run ML model or fallback
+
     if risk_model is not None:
         try:
-            # If model returns probability
-            if hasattr(risk_model, 'predict_proba'):
+            if hasattr(risk_model, "predict_proba"):
                 proba = risk_model.predict_proba(features)[0]
                 default_prob = float(proba[1]) if len(proba) > 1 else float(proba[0])
             else:
-                prediction = risk_model.predict(features)[0]
-                default_prob = float(prediction)
-            
-            risk_score = int(default_prob * 100)
-        except Exception as e:
-            print(f"Model prediction error: {e}")
-            risk_score, default_prob = calculate_fallback_score(input_data)
+                default_prob = float(risk_model.predict(features)[0])
+            risk_score = int(max(0, min(100, default_prob * 100)))
+        except Exception as err:
+            print(f"⚠️ Model inference failed, fallback used: {err}")
+            risk_score, default_prob = _fallback_score(input_data)
     else:
-        risk_score, default_prob = calculate_fallback_score(input_data)
-    
-    # Determine risk category
-    if risk_score <= 40:
-        risk_category = "Low"
-    elif risk_score <= 65:
-        risk_category = "Medium"
-    else:
-        risk_category = "High"
-    
-    # Generate explanations
-    explanation = generate_risk_explanation(input_data, risk_score)
-    
+        risk_score, default_prob = _fallback_score(input_data)
+
+    risk_category = "Low" if risk_score <= 40 else "Medium" if risk_score <= 65 else "High"
+
     return RiskAnalysisResult(
         risk_score=risk_score,
         risk_category=risk_category,
         default_probability=round(default_prob, 2),
-        explanation=explanation
+        explanation=_risk_explanation(input_data),
     )
 
 
-def calculate_fallback_score(input_data: RiskAnalysisInput) -> tuple:
-    """Fallback scoring when ML model is unavailable"""
-    # Weighted scoring based on financial ratios
-    score = 50  # Base score
-    
-    # Debt ratio impact (higher = riskier)
-    score += (input_data.debt_ratio - 0.5) * 40
-    
-    # Interest coverage (lower = riskier)
-    if input_data.interest_coverage_ratio < 1.5:
-        score += 15
-    elif input_data.interest_coverage_ratio > 3:
-        score -= 10
-    
-    # Profit margin (higher = safer)
-    score -= input_data.profit_margin * 30
-    
-    # Litigation impact
-    score += input_data.litigation_count * 5
-    
-    # Sector risk
-    score += input_data.sector_risk * 20
-    
-    # Collateral benefit
-    score -= input_data.collateral_score * 15
-    
-    risk_score = max(0, min(100, int(score)))
-    default_prob = risk_score / 100
-    
-    return risk_score, default_prob
+def _success(message: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    return {"status": "success", "message": message, "data": data or {}}
 
 
-def generate_risk_explanation(input_data: RiskAnalysisInput, risk_score: int) -> List[str]:
-    """Generate explainable AI factors"""
-    explanations = []
-    
-    if input_data.debt_ratio > 0.6:
-        explanations.append("High debt ratio indicates elevated leverage risk")
-    
-    if input_data.interest_coverage_ratio < 2:
-        explanations.append("Low interest coverage ratio signals potential debt servicing issues")
-    
-    if input_data.profit_margin < 0.1:
-        explanations.append("Thin profit margins reduce buffer against market volatility")
-    
-    if input_data.litigation_count > 0:
-        explanations.append(f"{input_data.litigation_count} ongoing litigation case(s) flagged")
-    
-    if input_data.sector_risk > 0.5:
-        explanations.append("Sector classified as moderate-to-high risk")
-    
-    if input_data.collateral_score < 0.5:
-        explanations.append("Weak collateral coverage")
-    
-    if not explanations:
-        explanations.append("Strong financial profile with balanced risk indicators")
-    
-    return explanations[:5]  # Top 5 factors
+# ============== HEALTH ==============
+
+@app.get("/")
+def root() -> Dict[str, Any]:
+    return _success("Intelli-Credit API running", {"model_loaded": risk_model is not None})
 
 
-@app.post("/api/process-document", response_model=ProcessedDocument)
-async def process_document(file: UploadFile = File(...)):
-    """
-    Process uploaded PDF document using OCR
-    Extract financial data for risk analysis
-    """
-    # In production, use pytesseract + pdfplumber
-    # For demo, return simulated extraction
-    
-    filename = file.filename.lower()
-    
-    # Simulate OCR extraction based on document type
-    if "financial" in filename or "annual" in filename:
-        return ProcessedDocument(
-            revenue=230000000000,
-            profit=25000000000,
-            outstanding_debt=80000000000,
-            litigation_mentions=1,
-            total_assets=450000000000,
-            total_liabilities=280000000000,
-            directors=["Mukesh Ambani", "Nikhil Meswani", "Hital Meswani"]
-        )
-    elif "gst" in filename:
-        return ProcessedDocument(
-            revenue=230000000000,
-            profit=0,
-            outstanding_debt=0,
-            litigation_mentions=0
-        )
-    else:
-        return ProcessedDocument(
-            revenue=150000000000,
-            profit=15000000000,
-            outstanding_debt=60000000000,
-            litigation_mentions=0
-        )
+# ============== LEGACY + REQUIRED ENDPOINTS ==============
 
-
-@app.post("/api/verify-documents", response_model=VerificationResult)
-def verify_documents(input_data: VerificationInput):
-    """
-    Run document cross-validation checks
-    PAN-GST match, CIN validation, director verification
-    """
-    app_id = input_data.application_id
-    
-    # Simulate verification based on application
-    if app_id in applications_db:
-        return VerificationResult(
-            document_integrity_score=87,
-            pan_gstin_match=True,
-            cin_valid=True,
-            director_mismatch=False
-        )
-    else:
-        return VerificationResult(
-            document_integrity_score=65,
-            pan_gstin_match=True,
-            cin_valid=True,
-            director_mismatch=True
-        )
-
-
-@app.post("/api/generate-cam", response_model=CamReport)
-def generate_cam(input_data: CamGenerationInput):
-    """
-    Generate Credit Appraisal Memo
-    Combines company profile, financials, risk analysis, and recommendation
-    """
-    app_id = input_data.application_id
-    
-    if app_id not in applications_db:
-        raise HTTPException(status_code=404, detail="Application not found")
-    
-    app = applications_db[app_id]
-    
-    # Generate CAM sections
-    company_overview = f"{app['company_name']} is a leading company in the {app['sector']} sector with established market presence and operational history."
-    
-    fin = app.get("financials", {})
-    financial_analysis = f"The company reported revenue of ₹{fin.get('revenue', 0) / 10000000:.0f} Cr with profit of ₹{fin.get('profit', 0) / 10000000:.0f} Cr. Outstanding debt stands at ₹{fin.get('debt', 0) / 10000000:.0f} Cr."
-    
-    risk_score = app.get("risk_score", 50)
-    if risk_score <= 40:
-        risk_analysis = "Low risk profile with strong financial fundamentals and adequate collateral coverage."
-        recommendation = "Approve"
-        interest_rate = "10.5%"
-    elif risk_score <= 65:
-        risk_analysis = "Medium risk profile. Recommend conditional approval with enhanced monitoring."
-        recommendation = "Conditional Approval"
-        interest_rate = "12.0%"
-    else:
-        risk_analysis = "High risk profile. Significant concerns regarding debt servicing capacity."
-        recommendation = "Reject"
-        interest_rate = "N/A"
-    
-    return CamReport(
-        company_overview=company_overview,
-        financial_analysis=financial_analysis,
-        risk_analysis=risk_analysis,
-        recommendation=recommendation,
-        suggested_loan_limit=f"₹{app['loan_amount']} Cr",
-        interest_rate=interest_rate
-    )
-
-
-@app.get("/api/workflow-status/{application_id}", response_model=List[WorkflowStep])
-def get_workflow_status(application_id: str):
-    """Get workflow timeline for an application"""
-    
-    if application_id not in applications_db:
-        raise HTTPException(status_code=404, detail="Application not found")
-    
-    workflow = applications_db[application_id].get("workflow", [])
-    
+@app.get("/applications", response_model=List[ApplicationSummary])
+@app.get("/api/applications", response_model=List[ApplicationSummary])
+def get_applications() -> List[ApplicationSummary]:
     return [
-        WorkflowStep(
-            stage=step["stage"],
-            status=step["status"],
-            date=step["date"]
+        ApplicationSummary(
+            id=a["id"],
+            company_name=a["company_name"],
+            sector=a["sector"],
+            loan_amount=float(a["loan_amount"]),
+            risk_score=int(a.get("risk_score", 50)),
+            status=a.get("status", "Under Review"),
         )
-        for step in workflow
+        for a in applications_db.values()
     ]
 
 
-# ============== STARTUP ==============
+@app.get("/application/{application_id}")
+def get_application(application_id: str) -> Dict[str, Any]:
+    app_data = applications_db.get(application_id)
+    if not app_data:
+        raise HTTPException(status_code=404, detail="Application not found")
+    return _success("Application fetched", app_data)
+
+
+@app.post("/create-application")
+def create_application(payload: CreateApplicationInput) -> Dict[str, Any]:
+    app_id = f"app_{len(applications_db) + 1:03d}"
+    applications_db[app_id] = {
+        "id": app_id,
+        "company_name": payload.company_name,
+        "sector": payload.sector,
+        "loan_amount": payload.loan_amount,
+        "risk_score": 50,
+        "status": "Application Created",
+        "created_at": datetime.utcnow().isoformat(),
+    }
+    return _success("Application created", {"application_id": app_id})
+
+
+@app.post("/upload-document")
+async def upload_document(application_id: str, file: UploadFile = File(...)) -> Dict[str, Any]:
+    if application_id not in applications_db:
+        raise HTTPException(status_code=404, detail="Application not found")
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="Invalid file")
+    return _success("Document uploaded", {"application_id": application_id, "filename": file.filename})
+
+
+@app.post("/verify-documents")
+@app.post("/api/verify-documents")
+def verify_documents(payload: VerificationInput) -> Dict[str, Any]:
+    if payload.application_id not in applications_db:
+        raise HTTPException(status_code=404, detail="Application not found")
+    return _success("Documents verified", {
+        "document_integrity_score": 87,
+        "pan_gstin_match": True,
+        "cin_valid": True,
+        "director_mismatch": False,
+    })
+
+
+@app.post("/run-risk-analysis", response_model=RiskAnalysisResult)
+@app.post("/api/risk-analysis", response_model=RiskAnalysisResult)
+def run_risk_analysis(payload: RiskAnalysisInput) -> RiskAnalysisResult:
+    return _run_risk_model(payload)
+
+
+@app.post("/generate-cam", response_model=CamReport)
+@app.post("/api/generate-cam", response_model=CamReport)
+def generate_cam(payload: CamGenerationInput) -> CamReport:
+    app_data = applications_db.get(payload.application_id)
+    if not app_data:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+    risk_score = int(app_data.get("risk_score", 50))
+    recommendation = "Approve" if risk_score <= 40 else "Conditional Approval" if risk_score <= 65 else "Reject"
+    rate = "9.8%" if risk_score <= 40 else "11.5%" if risk_score <= 65 else "N/A"
+
+    return CamReport(
+        company_overview=f"{app_data['company_name']} operates in the {app_data['sector']} sector.",
+        financial_analysis="Financial statements reviewed; leverage and servicing capacity assessed.",
+        risk_analysis=f"Risk score: {risk_score}. Category: {'Low' if risk_score <= 40 else 'Medium' if risk_score <= 65 else 'High'}.",
+        recommendation=recommendation,
+        suggested_loan_limit=f"₹{app_data['loan_amount']} Cr",
+        interest_rate=rate,
+    )
+
+
+@app.post("/finalize-decision")
+def finalize_decision(payload: FinalizeDecisionInput) -> Dict[str, Any]:
+    app_data = applications_db.get(payload.application_id)
+    if not app_data:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+    normalized = payload.decision.lower()
+    if normalized not in {"approve", "reject", "conditional", "review"}:
+        raise HTTPException(status_code=400, detail="Invalid decision")
+
+    final_status = "Approved" if normalized == "approve" else "Rejected" if normalized == "reject" else "Under Review"
+    app_data["status"] = final_status
+    app_data["final_status"] = final_status
+
+    return _success("Decision finalized", {"application_id": payload.application_id, "final_status": final_status})
+
+
+@app.post("/ai-copilot/query")
+def ai_copilot_query(payload: CopilotQueryInput) -> Dict[str, Any]:
+    context = f"Application {payload.application_id}" if payload.application_id else "Portfolio"
+    answer = f"{context}: Based on available credit signals, review debt coverage, collateral strength, and litigation profile before final approval."
+    return _success("AI copilot response generated", {"answer": answer})
+
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=5000)
