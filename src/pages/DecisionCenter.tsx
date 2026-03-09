@@ -30,6 +30,7 @@ import { ActiveApplicationBanner, NoApplicationSelected } from "@/components/Act
 import { CreditOfficerDecisionPanel } from "@/components/decisions/CreditOfficerDecisionPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { getDecisionState, submitManagerDecision, type ManagerDecision, type DecisionState } from "@/services/decisionEngine";
+import { finalizeDecision } from "@/services/finalizeDecision";
 import { useAuth } from "@/contexts/AuthContext";
 
 const decisionReasons = [
