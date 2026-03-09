@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   Upload, FileCheck, AlertTriangle, XCircle, File, Trash2, 
   CheckCircle2, ShieldCheck, RotateCcw, Loader2, Wifi, WifiOff,
-  CloudUpload, FileText, Image, FileType
+  CloudUpload, FileText, Image, FileType, Sparkles
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { logAuditEvent } from "@/services/auditLog";
 import { createNotification } from "@/services/notifications";
 import { ProcessingBanner } from "@/components/ui/processing-status";
+import { extractDocumentFields, verifyDocuments, runFullPipeline, type VerificationResult } from "@/services/documentProcessing";
 
 interface DocFile {
   id: string;
@@ -207,25 +208,72 @@ export default function DocumentVerification() {
     }, 2500);
   }, [toast]);
 
+  const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
+  const [extracting, setExtracting] = useState(false);
+
   const runFullVerification = useCallback(async () => {
+    if (!selectedApplication) return;
+    const isUUID = /^[0-9a-f]{8}-/i.test(selectedApplication.id);
+    if (!isUUID) {
+      toast({ title: "Demo Application", description: "Verification only works with database applications." });
+      return;
+    }
+
     setVerifying(true);
     setVerifyComplete(false);
-    toast({ title: "Verification Started", description: "Running full document verification..." });
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    setDocs(prev => prev.map(d => d.status === "pending" ? { ...d, status: "verified" as const } : d));
-    const pendingIds = docs.filter(d => d.status === "pending").map(d => d.id);
-    if (pendingIds.length > 0) {
-      try {
-        await supabase.from("documents").update({ verification_status: "verified" }).in("id", pendingIds);
-      } catch (e) {}
+    toast({ title: "AI Verification Started", description: "Running document extraction and verification..." });
+
+    try {
+      // Step 1: Extract fields from all pending documents
+      const pendingDocs = docs.filter(d => d.status === "pending" && d.file_url);
+      for (const doc of pendingDocs) {
+        try {
+          await extractDocumentFields(doc.id, selectedApplication.id, doc.name, doc.file_url!);
+        } catch (e) {
+          console.error(`Extraction failed for ${doc.name}:`, e);
+        }
+      }
+
+      // Step 2: Verify extracted fields
+      const result = await verifyDocuments(selectedApplication.id);
+      setVerificationResult(result);
+
+      // Update local state
+      setDocs(prev => prev.map(d => d.status === "pending" ? { ...d, status: result.overall_status === "verified" ? "verified" as const : "pending" as const } : d));
+
+      await logAuditEvent("AI Verification Completed", `Integrity Score: ${result.document_integrity_score}`, selectedApplication.id, "AI Engine");
+      await createNotification("Verification Complete", `AI verification completed for ${selectedApplication.company}. Score: ${result.document_integrity_score}`, "info", selectedApplication.id);
+
+      toast({ title: "AI Verification Complete", description: `Integrity Score: ${result.document_integrity_score}/100` });
+    } catch (e: any) {
+      toast({ title: "Verification Failed", description: e.message || "Could not complete verification.", variant: "destructive" });
+    } finally {
+      setVerifying(false);
+      setVerifyComplete(true);
+      setTimeout(() => setVerifyComplete(false), 5000);
     }
-    await logAuditEvent("Verification Completed", "All documents verified", selectedApplication!.id, "System");
-    await createNotification("Verification Complete", `Document verification completed for ${selectedApplication!.company}`, "info", selectedApplication!.id);
-    setVerifying(false);
-    setVerifyComplete(true);
-    toast({ title: "Complete", description: "All pending documents verified." });
-    setTimeout(() => setVerifyComplete(false), 5000);
   }, [toast, docs, selectedApplication]);
+
+  const runPipeline = useCallback(async () => {
+    if (!selectedApplication) return;
+    const isUUID = /^[0-9a-f]{8}-/i.test(selectedApplication.id);
+    if (!isUUID) {
+      toast({ title: "Demo Application", description: "Pipeline only works with database applications." });
+      return;
+    }
+
+    setExtracting(true);
+    toast({ title: "Full Pipeline Started", description: "Running extraction → verification → risk → CAM..." });
+
+    try {
+      const result = await runFullPipeline(selectedApplication.id);
+      toast({ title: "Pipeline Complete", description: `All ${result.steps_completed.length} steps completed successfully.` });
+    } catch (e: any) {
+      toast({ title: "Pipeline Failed", description: e.message, variant: "destructive" });
+    } finally {
+      setExtracting(false);
+    }
+  }, [selectedApplication, toast]);
 
   if (!selectedApplication) return <NoApplicationSelected />;
 
@@ -250,17 +298,21 @@ export default function DocumentVerification() {
               <Wifi className="h-3 w-3" /> Cloud storage connected
             </Badge>
           )}
+          <Button variant="outline" className="gap-2" onClick={runPipeline} disabled={extracting || docs.length === 0}>
+            {extracting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            {extracting ? "Processing..." : "Run Full Pipeline"}
+          </Button>
           <Button className="gap-2" onClick={runFullVerification} disabled={verifying || pending === 0}>
             {verifying ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
-            {verifying ? "Verifying..." : "Run Full Verification"}
+            {verifying ? "Verifying..." : "AI Verify Documents"}
           </Button>
         </div>
       </div>
 
       <ProcessingBanner
-        state={verifying ? "processing" : verifyComplete ? "success" : "idle"}
-        processingText="Verifying compliance documents..."
-        successText="Documents Verified ✔"
+        state={verifying || extracting ? "processing" : verifyComplete ? "success" : "idle"}
+        processingText={extracting ? "Running full AI pipeline..." : "AI verifying compliance documents..."}
+        successText="AI Processing Complete ✔"
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

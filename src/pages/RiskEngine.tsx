@@ -32,35 +32,39 @@ export default function RiskEngine() {
         setLiveResult(result);
         setRiskComplete(true);
         setTimeout(() => setRiskComplete(false), 5000);
-        toast({ title: "ML Model Response", description: `Risk Score: ${result.risk_score} — ${result.risk_category}` });
+        toast({ title: "AI Risk Analysis Complete", description: `Risk Score: ${result.risk_score} — ${result.risk_category}` });
         if (selectedApplication) {
           const isUUID = /^[0-9a-f]{8}-/i.test(selectedApplication.id);
           if (isUUID) {
             await logAuditEvent("Risk Analysis Completed", `Risk Score: ${result.risk_score} — ${result.risk_category}`, selectedApplication.id, "System");
-            if (result.risk_score > 65) {
+            if (result.risk_score < 40) {
               await createNotification("High Risk Detected", `${selectedApplication.company} — Risk Score: ${result.risk_score}`, "error", selectedApplication.id);
             }
           }
         }
       },
-      onError: () => {
-        toast({ title: "Backend Unavailable", description: "Using pre-computed mock data. Start your FastAPI server to get live predictions.", variant: "destructive" });
+      onError: (err) => {
+        toast({ title: "Risk Analysis Failed", description: err.message || "Could not run risk analysis.", variant: "destructive" });
       },
     }
   );
 
   const handleRunModel = async () => {
     if (!selectedApplication) return;
+    const isUUID = /^[0-9a-f]{8}-/i.test(selectedApplication.id);
     const fin = (selectedApplication as any).financials ?? {};
-    await executeRiskAnalysis({
-      revenue_growth: 0.12,
-      profit_margin: (fin.dscr ?? 1) > 1.5 ? 0.18 : 0.08,
-      debt_ratio: fin.debtEquity ?? 0.5,
-      interest_coverage_ratio: fin.interestCoverage ?? 2,
-      litigation_count: 1,
-      sector_risk: 0.5,
-      collateral_score: 0.7,
-    });
+    await executeRiskAnalysis(
+      {
+        revenue_growth: 0.12,
+        profit_margin: (fin.dscr ?? 1) > 1.5 ? 0.18 : 0.08,
+        debt_ratio: fin.debtEquity ?? 0.5,
+        interest_coverage_ratio: fin.interestCoverage ?? 2,
+        litigation_count: 1,
+        sector_risk: 0.5,
+        collateral_score: 0.7,
+      },
+      isUUID ? selectedApplication.id : undefined
+    );
   };
 
   if (!selectedApplication) return <NoApplicationSelected />;

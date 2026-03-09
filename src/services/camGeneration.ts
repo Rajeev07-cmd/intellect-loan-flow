@@ -1,4 +1,3 @@
-import { apiClient } from "./api";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface CamReport {
@@ -8,6 +7,22 @@ export interface CamReport {
   recommendation: string;
   suggested_loan_limit: string;
   interest_rate: string;
+}
+
+// Generate CAM via AI edge function
+export async function generateCam(applicationId: string): Promise<CamReport> {
+  const { data, error } = await supabase.functions.invoke("generate-cam", {
+    body: { application_id: applicationId },
+  });
+
+  if (error) {
+    console.error("CAM generation error:", error);
+    throw new Error(error.message || "CAM generation failed");
+  }
+
+  if (data.error) throw new Error(data.error);
+
+  return data.cam as CamReport;
 }
 
 // Save CAM report to database
@@ -27,7 +42,6 @@ export async function saveCamReport(
 
   if (error) console.error("Error saving CAM report:", error);
 
-  // Update application with CAM data
   await supabase.from("applications").update({
     recommendation: report.recommendation,
     suggested_limit: report.suggested_loan_limit,
@@ -56,24 +70,6 @@ export async function getCamReport(
     suggested_loan_limit: data.suggested_loan_limit || "",
     interest_rate: data.interest_rate || "",
   };
-}
-
-// Generate CAM via backend service
-export async function generateCam(applicationId: string): Promise<CamReport> {
-  try {
-    // Call the backend service
-    const report = await apiClient.post<CamReport>("/api/generate-cam", {
-      application_id: applicationId,
-    });
-
-    // Save to database
-    await saveCamReport(applicationId, report);
-
-    return report;
-  } catch (error) {
-    console.error("Backend CAM service unavailable:", error);
-    throw error;
-  }
 }
 
 // Check if CAM exists for application
