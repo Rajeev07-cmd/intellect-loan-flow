@@ -12,6 +12,7 @@ import { ActiveApplicationBanner, NoApplicationSelected } from "@/components/Act
 import { saveCamReport, getCamReport } from "@/services/camReports";
 import { logAuditEvent } from "@/services/auditLog";
 import { createNotification } from "@/services/notifications";
+import { ProcessingBanner } from "@/components/ui/processing-status";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
