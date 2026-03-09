@@ -225,7 +225,7 @@ export function NewApplicationWizard({ open, onOpenChange, onSuccess }: NewAppli
 
       // Reset
       setStep(1);
-      setFormData({ company_name: "", cin: "", sector: "", loan_amount: "", business_description: "", registered_address: "", contact_person: "", incorporation_year: "", promoter_group: "" });
+      setFormData({ company_name: "", sector: "", loan_amount: "", company_email: "" });
       setUploadedFiles([]);
       onOpenChange(false);
       onSuccess();
