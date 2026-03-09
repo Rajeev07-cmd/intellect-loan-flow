@@ -527,6 +527,7 @@ function ManagerReviewPanel({ onBackToQueue }: { onBackToQueue: () => void }) {
   const [comments, setComments] = useState<{ user: string; role: string; time: string; text: string; author?: string }[]>([]);
   const [auditTrail, setAuditTrail] = useState<{ time: string; event: string; user: string }[]>([]);
   const [decisionState, setDecisionState] = useState<DecisionState>({ credit_officer_decision: null, manager_decision: null, final_status: null });
+  const [pipelineStage, setPipelineStage] = useState<"idle" | "saving" | "generating_cam" | "notifying" | "done">("idle");
   const { toast } = useToast();
 
   useEffect(() => {
