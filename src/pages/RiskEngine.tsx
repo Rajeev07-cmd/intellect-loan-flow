@@ -23,6 +23,7 @@ export default function RiskEngine() {
   const { selectedApplication } = useApplicationStore();
   const { toast } = useToast();
   const [liveResult, setLiveResult] = useState<RiskAnalysisResult | null>(null);
+  const [riskComplete, setRiskComplete] = useState(false);
 
   const { loading: analyzing, usingFallback, execute: executeRiskAnalysis } = useApiCall(
     runRiskAnalysis,
