@@ -310,9 +310,9 @@ export default function DocumentVerification() {
       </div>
 
       <ProcessingBanner
-        state={verifying ? "processing" : verifyComplete ? "success" : "idle"}
-        processingText="Verifying compliance documents..."
-        successText="Documents Verified ✔"
+        state={verifying || extracting ? "processing" : verifyComplete ? "success" : "idle"}
+        processingText={extracting ? "Running full AI pipeline..." : "AI verifying compliance documents..."}
+        successText="AI Processing Complete ✔"
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
