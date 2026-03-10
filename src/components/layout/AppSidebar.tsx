@@ -25,6 +25,7 @@ const allNavItems: NavItem[] = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, roles: ["credit_officer", "admin"] },
   { title: "Applications", url: "/applications", icon: FileText, roles: ["credit_officer", "admin"] },
   { title: "Doc Verification", url: "/document-verification", icon: FileCheck, roles: ["credit_officer", "admin"] },
+  { title: "AML / Compliance", url: "/aml-compliance", icon: ShieldAlert, roles: ["credit_officer", "admin"] },
   { title: "Risk Engine", url: "/risk-engine", icon: Shield, roles: ["credit_officer", "admin"] },
   { title: "CAM Generator", url: "/cam-generator", icon: BookOpen, roles: ["credit_officer", "admin"] },
   { title: "Tracking", url: "/tracking", icon: GitBranch, roles: ["credit_officer", "admin"] },

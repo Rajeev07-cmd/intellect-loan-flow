@@ -55,6 +55,7 @@ const App = () => (
                   <Route path="/dashboard" element={<CreditOfficerDashboard />} />
                   <Route path="/applications" element={<Applications />} />
                   <Route path="/document-verification" element={<DocumentVerification />} />
+                  <Route path="/aml-compliance" element={<AmlCompliance />} />
                   <Route path="/risk-engine" element={<RiskEngine />} />
                   <Route path="/cam-generator" element={<CamGenerator />} />
                   <Route path="/tracking" element={<Tracking />} />
