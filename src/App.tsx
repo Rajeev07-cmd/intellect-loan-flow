@@ -13,6 +13,7 @@ import RiskEngine from "./pages/RiskEngine";
 import CamGenerator from "./pages/CamGenerator";
 import Tracking from "./pages/Tracking";
 import DocumentVerification from "./pages/DocumentVerification";
+import AmlCompliance from "./pages/AmlCompliance";
 import DecisionCenter from "./pages/DecisionCenter";
 import AIResearch from "./pages/AIResearch";
 
