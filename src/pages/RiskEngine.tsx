@@ -346,6 +346,9 @@ export default function RiskEngine() {
         </div>
       </motion.div>
 
+      {/* AML / Compliance Section */}
+      <AmlScreeningPanel />
+
     </div>
   );
 }

@@ -472,6 +472,9 @@ export default function DocumentVerification() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* AML Compliance Section */}
+      <AmlScreeningPanel />
     </div>
   );
 }
