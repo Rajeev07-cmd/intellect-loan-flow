@@ -62,7 +62,8 @@ const App = () => (
                   <Route path="/cam-generator" element={<CamGenerator />} />
                   <Route path="/tracking" element={<Tracking />} />
                   <Route path="/research" element={<AIResearch />} />
-                  
+                  <Route path="/document-classification" element={<DocumentClassification />} />
+                  <Route path="/swot-analysis" element={<SwotAnalysis />} />
                 </Route>
               </Route>
 
