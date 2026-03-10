@@ -52,7 +52,7 @@ export type Database = {
           {
             foreignKeyName: "aml_results_application_id_fkey"
             columns: ["application_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "applications"
             referencedColumns: ["id"]
           },
