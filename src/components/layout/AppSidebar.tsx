@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, FileText, FileCheck, Shield, BookOpen, GitBranch,
-  Brain, Gavel, Users, Zap, LogOut, User, Settings, ShieldAlert,
+  Brain, Gavel, Users, Zap, LogOut, User, Settings, ShieldAlert, FileSearch, Target,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
