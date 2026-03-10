@@ -23,3 +23,9 @@ verify_jwt = false
 
 [functions.run-aml-screening]
 verify_jwt = false
+
+[functions.classify-documents]
+verify_jwt = false
+
+[functions.generate-swot]
+verify_jwt = false

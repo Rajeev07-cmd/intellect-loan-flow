@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, FileText, FileCheck, Shield, BookOpen, GitBranch,
-  Brain, Gavel, Users, Zap, LogOut, User, Settings, ShieldAlert,
+  Brain, Gavel, Users, Zap, LogOut, User, Settings, ShieldAlert, FileSearch, Target,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -25,11 +25,13 @@ const allNavItems: NavItem[] = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, roles: ["credit_officer", "admin"] },
   { title: "Applications", url: "/applications", icon: FileText, roles: ["credit_officer", "admin"] },
   { title: "Doc Verification", url: "/document-verification", icon: FileCheck, roles: ["credit_officer", "admin"] },
+  { title: "Doc Classification", url: "/document-classification", icon: FileSearch, roles: ["credit_officer", "admin"] },
   { title: "AML / Compliance", url: "/aml-compliance", icon: ShieldAlert, roles: ["credit_officer", "admin"] },
   { title: "Risk Engine", url: "/risk-engine", icon: Shield, roles: ["credit_officer", "admin"] },
   { title: "CAM Generator", url: "/cam-generator", icon: BookOpen, roles: ["credit_officer", "admin"] },
   { title: "Tracking", url: "/tracking", icon: GitBranch, roles: ["credit_officer", "admin"] },
   { title: "AI Research", url: "/research", icon: Brain, roles: ["credit_officer", "admin"] },
+  { title: "SWOT Analysis", url: "/swot-analysis", icon: Target, roles: ["credit_officer", "admin"] },
   
   // Manager pages
   { title: "Manager Dashboard", url: "/manager-dashboard", icon: LayoutDashboard, roles: ["manager", "admin"] },
@@ -49,7 +51,7 @@ export function AppSidebar() {
   const visibleItems = allNavItems.filter(item => item.roles.includes(userRole));
 
   // Group items: "Main" for dashboard/workflow, "Tools" for secondary
-  const mainUrls = ["/dashboard", "/manager-dashboard", "/applications", "/document-verification", "/risk-engine", "/cam-generator", "/tracking"];
+  const mainUrls = ["/dashboard", "/manager-dashboard", "/applications", "/document-verification", "/document-classification", "/risk-engine", "/cam-generator", "/tracking"];
   const mainItems = visibleItems.filter(i => mainUrls.includes(i.url));
   const toolItems = visibleItems.filter(i => !mainUrls.includes(i.url));
 

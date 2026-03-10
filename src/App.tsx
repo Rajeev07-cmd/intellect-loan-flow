@@ -16,6 +16,8 @@ import DocumentVerification from "./pages/DocumentVerification";
 import AmlCompliance from "./pages/AmlCompliance";
 import DecisionCenter from "./pages/DecisionCenter";
 import AIResearch from "./pages/AIResearch";
+import DocumentClassification from "./pages/DocumentClassification";
+import SwotAnalysis from "./pages/SwotAnalysis";
 
 import ManagerDashboard from "./pages/ManagerDashboard";
 import AdminSettings from "./pages/AdminSettings";
@@ -60,7 +62,8 @@ const App = () => (
                   <Route path="/cam-generator" element={<CamGenerator />} />
                   <Route path="/tracking" element={<Tracking />} />
                   <Route path="/research" element={<AIResearch />} />
-                  
+                  <Route path="/document-classification" element={<DocumentClassification />} />
+                  <Route path="/swot-analysis" element={<SwotAnalysis />} />
                 </Route>
               </Route>
 

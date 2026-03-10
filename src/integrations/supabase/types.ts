@@ -221,6 +221,54 @@ export type Database = {
           },
         ]
       }
+      document_classifications: {
+        Row: {
+          ai_predicted_type: string
+          application_id: string
+          confidence_score: number | null
+          created_at: string
+          document_id: string
+          id: string
+          updated_at: string
+          user_decision: string | null
+        }
+        Insert: {
+          ai_predicted_type?: string
+          application_id: string
+          confidence_score?: number | null
+          created_at?: string
+          document_id: string
+          id?: string
+          updated_at?: string
+          user_decision?: string | null
+        }
+        Update: {
+          ai_predicted_type?: string
+          application_id?: string
+          confidence_score?: number | null
+          created_at?: string
+          document_id?: string
+          id?: string
+          updated_at?: string
+          user_decision?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_classifications_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_classifications_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_extracted_fields: {
         Row: {
           application_id: string
@@ -537,6 +585,44 @@ export type Database = {
           reason?: string | null
         }
         Relationships: []
+      }
+      swot_reports: {
+        Row: {
+          application_id: string
+          created_at: string
+          id: string
+          opportunities: Json | null
+          strengths: Json | null
+          threats: Json | null
+          weaknesses: Json | null
+        }
+        Insert: {
+          application_id: string
+          created_at?: string
+          id?: string
+          opportunities?: Json | null
+          strengths?: Json | null
+          threats?: Json | null
+          weaknesses?: Json | null
+        }
+        Update: {
+          application_id?: string
+          created_at?: string
+          id?: string
+          opportunities?: Json | null
+          strengths?: Json | null
+          threats?: Json | null
+          weaknesses?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "swot_reports_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: true
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       workflow_status: {
         Row: {
