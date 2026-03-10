@@ -1,0 +1,1 @@
+ALTER TABLE public.aml_results ADD CONSTRAINT aml_results_application_id_key UNIQUE (application_id);

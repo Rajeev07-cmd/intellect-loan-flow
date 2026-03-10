@@ -13,6 +13,7 @@ import { runRiskAnalysis, type RiskAnalysisResult } from "@/services/riskAnalysi
 import { logAuditEvent } from "@/services/auditLog";
 import { createNotification } from "@/services/notifications";
 import { useApiCall } from "@/hooks/useApiCall";
+import { AmlScreeningPanel } from "@/components/compliance/AmlScreeningPanel";
 import { ProcessingBanner } from "@/components/ui/processing-status";
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
@@ -344,6 +345,9 @@ export default function RiskEngine() {
           ))}
         </div>
       </motion.div>
+
+      {/* AML / Compliance Section */}
+      <AmlScreeningPanel />
 
     </div>
   );

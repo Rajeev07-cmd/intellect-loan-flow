@@ -18,6 +18,7 @@ import { logAuditEvent } from "@/services/auditLog";
 import { createNotification } from "@/services/notifications";
 import { ProcessingBanner } from "@/components/ui/processing-status";
 import { extractDocumentFields, verifyDocuments, runFullPipeline, type VerificationResult } from "@/services/documentProcessing";
+import { AmlScreeningPanel } from "@/components/compliance/AmlScreeningPanel";
 
 interface DocFile {
   id: string;
@@ -471,6 +472,9 @@ export default function DocumentVerification() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* AML Compliance Section */}
+      <AmlScreeningPanel />
     </div>
   );
 }

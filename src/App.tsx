@@ -13,6 +13,7 @@ import RiskEngine from "./pages/RiskEngine";
 import CamGenerator from "./pages/CamGenerator";
 import Tracking from "./pages/Tracking";
 import DocumentVerification from "./pages/DocumentVerification";
+import AmlCompliance from "./pages/AmlCompliance";
 import DecisionCenter from "./pages/DecisionCenter";
 import AIResearch from "./pages/AIResearch";
 
@@ -54,6 +55,7 @@ const App = () => (
                   <Route path="/dashboard" element={<CreditOfficerDashboard />} />
                   <Route path="/applications" element={<Applications />} />
                   <Route path="/document-verification" element={<DocumentVerification />} />
+                  <Route path="/aml-compliance" element={<AmlCompliance />} />
                   <Route path="/risk-engine" element={<RiskEngine />} />
                   <Route path="/cam-generator" element={<CamGenerator />} />
                   <Route path="/tracking" element={<Tracking />} />

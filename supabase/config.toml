@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.process-pipeline]
 verify_jwt = false
+
+[functions.run-aml-screening]
+verify_jwt = false
