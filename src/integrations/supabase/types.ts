@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      aml_results: {
+        Row: {
+          aml_risk_level: string | null
+          aml_risk_score: number | null
+          application_id: string
+          created_at: string
+          flags: Json | null
+          fraud_history: boolean | null
+          id: string
+          pep_detected: boolean | null
+          sanction_match: boolean | null
+        }
+        Insert: {
+          aml_risk_level?: string | null
+          aml_risk_score?: number | null
+          application_id: string
+          created_at?: string
+          flags?: Json | null
+          fraud_history?: boolean | null
+          id?: string
+          pep_detected?: boolean | null
+          sanction_match?: boolean | null
+        }
+        Update: {
+          aml_risk_level?: string | null
+          aml_risk_score?: number | null
+          application_id?: string
+          created_at?: string
+          flags?: Json | null
+          fraud_history?: boolean | null
+          id?: string
+          pep_detected?: boolean | null
+          sanction_match?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aml_results_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       applications: {
         Row: {
           business_description: string | null
@@ -372,6 +416,33 @@ export type Database = {
           },
         ]
       }
+      pep_database: {
+        Row: {
+          country: string | null
+          created_at: string
+          id: string
+          person_name: string
+          position: string | null
+          risk_level: string | null
+        }
+        Insert: {
+          country?: string | null
+          created_at?: string
+          id?: string
+          person_name: string
+          position?: string | null
+          risk_level?: string | null
+        }
+        Update: {
+          country?: string | null
+          created_at?: string
+          id?: string
+          person_name?: string
+          position?: string | null
+          risk_level?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -439,6 +510,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      sanction_list: {
+        Row: {
+          company_name: string | null
+          country: string | null
+          created_at: string
+          director_name: string | null
+          id: string
+          reason: string | null
+        }
+        Insert: {
+          company_name?: string | null
+          country?: string | null
+          created_at?: string
+          director_name?: string | null
+          id?: string
+          reason?: string | null
+        }
+        Update: {
+          company_name?: string | null
+          country?: string | null
+          created_at?: string
+          director_name?: string | null
+          id?: string
+          reason?: string | null
+        }
+        Relationships: []
       }
       workflow_status: {
         Row: {
