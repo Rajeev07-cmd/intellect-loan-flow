@@ -65,6 +65,7 @@ const App = () => (
                   <Route path="/tracking" element={<Tracking />} />
                   <Route path="/research" element={<AIResearch />} />
                   <Route path="/document-classification" element={<DocumentClassification />} />
+                  <Route path="/extraction-workspace" element={<ExtractionWorkspace />} />
                   <Route path="/swot-analysis" element={<SwotAnalysis />} />
                   <Route path="/final-report" element={<FinalReport />} />
                 </Route>
