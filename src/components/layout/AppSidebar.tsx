@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, FileText, FileCheck, Shield, BookOpen, GitBranch,
-  Brain, Gavel, Users, Zap, LogOut, User, Settings, ShieldAlert, FileSearch, Target, FileBarChart,
+  Brain, Gavel, Users, Zap, LogOut, User, Settings, ShieldAlert, FileSearch, Target, FileBarChart, Database,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -26,6 +26,7 @@ const allNavItems: NavItem[] = [
   { title: "Applications", url: "/applications", icon: FileText, roles: ["credit_officer", "admin"] },
   { title: "Doc Verification", url: "/document-verification", icon: FileCheck, roles: ["credit_officer", "admin"] },
   { title: "Doc Classification", url: "/document-classification", icon: FileSearch, roles: ["credit_officer", "admin"] },
+  { title: "Extraction Workspace", url: "/extraction-workspace", icon: Database, roles: ["credit_officer", "admin"] },
   { title: "AML / Compliance", url: "/aml-compliance", icon: ShieldAlert, roles: ["credit_officer", "admin"] },
   { title: "Risk Engine", url: "/risk-engine", icon: Shield, roles: ["credit_officer", "admin"] },
   { title: "CAM Generator", url: "/cam-generator", icon: BookOpen, roles: ["credit_officer", "admin"] },
