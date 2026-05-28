@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, FileText, FileCheck, Shield, BookOpen, GitBranch,
-  Brain, Gavel, Users, Zap, LogOut, User, Settings, ShieldAlert, FileSearch, Target,
+  Brain, Gavel, Users, Zap, LogOut, User, Settings, ShieldAlert, FileSearch, Target, FileBarChart,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -32,6 +32,7 @@ const allNavItems: NavItem[] = [
   { title: "Tracking", url: "/tracking", icon: GitBranch, roles: ["credit_officer", "admin"] },
   { title: "AI Research", url: "/research", icon: Brain, roles: ["credit_officer", "admin"] },
   { title: "SWOT Analysis", url: "/swot-analysis", icon: Target, roles: ["credit_officer", "admin"] },
+  { title: "Final Report", url: "/final-report", icon: FileBarChart, roles: ["credit_officer", "manager", "admin"] },
   
   // Manager pages
   { title: "Manager Dashboard", url: "/manager-dashboard", icon: LayoutDashboard, roles: ["manager", "admin"] },

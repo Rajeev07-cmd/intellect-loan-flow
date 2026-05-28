@@ -18,6 +18,7 @@ import DecisionCenter from "./pages/DecisionCenter";
 import AIResearch from "./pages/AIResearch";
 import DocumentClassification from "./pages/DocumentClassification";
 import SwotAnalysis from "./pages/SwotAnalysis";
+import FinalReport from "./pages/FinalReport";
 
 import ManagerDashboard from "./pages/ManagerDashboard";
 import AdminSettings from "./pages/AdminSettings";
@@ -64,6 +65,7 @@ const App = () => (
                   <Route path="/research" element={<AIResearch />} />
                   <Route path="/document-classification" element={<DocumentClassification />} />
                   <Route path="/swot-analysis" element={<SwotAnalysis />} />
+                  <Route path="/final-report" element={<FinalReport />} />
                 </Route>
               </Route>
 
