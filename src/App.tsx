@@ -19,6 +19,7 @@ import AIResearch from "./pages/AIResearch";
 import DocumentClassification from "./pages/DocumentClassification";
 import SwotAnalysis from "./pages/SwotAnalysis";
 import FinalReport from "./pages/FinalReport";
+import ExtractionWorkspace from "./pages/ExtractionWorkspace";
 
 import ManagerDashboard from "./pages/ManagerDashboard";
 import AdminSettings from "./pages/AdminSettings";
